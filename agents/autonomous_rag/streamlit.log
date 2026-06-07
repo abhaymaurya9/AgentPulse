@@ -1,0 +1,710 @@
+2026-06-07 23:10:28.309 Uvicorn server started on 0.0.0.0:8501
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.1.6:8501
+
+  For better performance, install the Watchdog module:
+
+  $ xcode-select --install
+  $ pip install watchdog
+            
+DEBUG ***************** Agent ID: auto_rag_agent *****************              
+DEBUG Reading AgentSession: 5edded90-efb7-42e4-ab2c-d7e0eef225de                
+DEBUG Creating new AgentSession: 5edded90-efb7-42e4-ab2c-d7e0eef225de           
+DEBUG ** Agent Run Start: fea9aca2-b079-43d1-ad30-f3f6eb92317d ***              
+DEBUG Processing tools for model                                                
+DEBUG Added tool web_search from websearch                                      
+DEBUG Added tool search_news from websearch                                     
+DEBUG Added tool search_knowledge_base                                          
+DEBUG ------------------- Groq Response Start --------------------              
+DEBUG -------------- Model: llama-3.3-70b-versatile --------------              
+DEBUG ========================== system ==========================              
+DEBUG - Search your knowledge base first.                                       
+      - If not found, search the internet.                                      
+      - Provide clear and concise answers.                                      
+      - CRITICAL: Always use native function calling parameters. Do NOT wrap    
+      tool calls in XML-like tags like '<function=...>' or '</function>'.       
+      Generate only the native tool call arguments.                             
+      <additional_information>                                                  
+      - Use markdown to format your answers.                                    
+      </additional_information>                                                 
+                                                                                
+      <knowledge_base>                                                          
+      You have a knowledge base you can search using the search_knowledge_base  
+      tool. Search before answering questions—don't assume you know the answer. 
+      For ambiguous questions, search first rather than asking for              
+      clarification.                                                            
+      </knowledge_base>                                                         
+DEBUG =========================== user ===========================              
+DEBUG What are the context window sizes of Llama 2 models?                      
+DEBUG Calling Groq with request parameters: {'tools': [{'type': 'function',     
+      'function': {'name': 'search_knowledge_base', 'description': 'Use this    
+      function to search the knowledge base for information about a query.',    
+      'parameters': {'type': 'object', 'properties': {'query': {'type':         
+      'string', 'description': 'The query to search for.'}}, 'required':        
+      ['query'], 'additionalProperties': False}}}, {'type': 'function',         
+      'function': {'name': 'search_news', 'description': 'Use this function to  
+      get the latest news from the web.', 'parameters': {'type': 'object',      
+      'properties': {'query': {'type': 'string', 'description': '(str) The query
+      to search for.'}, 'max_results': {'type': 'integer', 'description':       
+      '(optional, default=5) The maximum number of results to return.'}},       
+      'required': ['query']}, 'requires_confirmation': False,                   
+      'external_execution': False}}, {'type': 'function', 'function': {'name':  
+      'web_search', 'description': 'Use this function to search the web for a   
+      query.', 'parameters': {'type': 'object', 'properties': {'query': {'type':
+      'string', 'description': '(str) The query to search for.'}, 'max_results':
+      {'type': 'integer', 'description': '(optional, default=5) The maximum     
+      number of results to return.'}}, 'required': ['query']},                  
+      'requires_confirmation': False, 'external_execution': False}}]}           
+DEBUG ======================== assistant =========================              
+DEBUG search_knowledge_base{"query": "Llama 2 context window sizes"}            
+DEBUG ************************  METRICS  *************************              
+DEBUG * Tokens:                      input=572, output=17, total=589            
+DEBUG * Duration:                    0.3804s                                    
+DEBUG * Tokens per second:           44.6906 tokens/s                           
+DEBUG * Time to first token:         0.3804s                                    
+DEBUG ************************  METRICS  *************************              
+DEBUG -------------------- Groq Response End ---------------------              
+DEBUG Added RunOutput to Agent Session                                          
+DEBUG Created or updated AgentSession record:                                   
+      5edded90-efb7-42e4-ab2c-d7e0eef225de                                      
+DEBUG *** Agent Run End: fea9aca2-b079-43d1-ad30-f3f6eb92317d ****              
+DEBUG ***** Session ID: 5edded90-efb7-42e4-ab2c-d7e0eef225de *****              
+DEBUG ***************** Agent ID: auto_rag_agent *****************              
+DEBUG Reading AgentSession: 5edded90-efb7-42e4-ab2c-d7e0eef225de                
+DEBUG Initialized PgVector with table 'ai.auto_rag_docs'                        
+DEBUG Checking if table 'ai.auto_rag_docs' exists.                              
+DEBUG Function: web_search registered with websearch                            
+DEBUG Function: search_news registered with websearch                           
+DEBUG ** Agent Run Start: c926c640-cfb7-4cac-a5f5-2696c05baa4e ***              
+DEBUG Processing tools for model                                                
+DEBUG Added tool web_search from websearch                                      
+DEBUG Added tool search_news from websearch                                     
+DEBUG Added tool search_knowledge_base                                          
+DEBUG ------------------- Groq Response Start --------------------              
+DEBUG -------------- Model: llama-3.3-70b-versatile --------------              
+DEBUG ========================== system ==========================              
+DEBUG - Search your knowledge base first.                                       
+      - If not found, search the internet.                                      
+      - Provide clear and concise answers.                                      
+      - CRITICAL: Always use native function calling parameters. Do NOT wrap    
+      tool calls in XML-like tags like '<function=...>' or '</function>'.       
+      Generate only the native tool call arguments.                             
+      <additional_information>                                                  
+      - Use markdown to format your answers.                                    
+      </additional_information>                                                 
+                                                                                
+      <knowledge_base>                                                          
+      You have a knowledge base you can search using the search_knowledge_base  
+      tool. Search before answering questions—don't assume you know the answer. 
+      For ambiguous questions, search first rather than asking for              
+      clarification.                                                            
+      </knowledge_base>                                                         
+DEBUG =========================== user ===========================              
+DEBUG What are the context window sizes of Llama 2 models?                      
+DEBUG Calling Groq with request parameters: {'tools': [{'type': 'function',     
+      'function': {'name': 'search_knowledge_base', 'description': 'Use this    
+      function to search the knowledge base for information about a query.',    
+      'parameters': {'type': 'object', 'properties': {'query': {'type':         
+      'string', 'description': 'The query to search for.'}}, 'required':        
+      ['query'], 'additionalProperties': False}}}, {'type': 'function',         
+      'function': {'name': 'search_news', 'description': 'Use this function to  
+      get the latest news from the web.', 'parameters': {'type': 'object',      
+      'properties': {'query': {'type': 'string', 'description': '(str) The query
+      to search for.'}, 'max_results': {'type': 'integer', 'description':       
+      '(optional, default=5) The maximum number of results to return.'}},       
+      'required': ['query']}, 'requires_confirmation': False,                   
+      'external_execution': False}}, {'type': 'function', 'function': {'name':  
+      'web_search', 'description': 'Use this function to search the web for a   
+      query.', 'parameters': {'type': 'object', 'properties': {'query': {'type':
+      'string', 'description': '(str) The query to search for.'}, 'max_results':
+      {'type': 'integer', 'description': '(optional, default=5) The maximum     
+      number of results to return.'}}, 'required': ['query']},                  
+      'requires_confirmation': False, 'external_execution': False}}]}           
+DEBUG ======================== assistant =========================              
+DEBUG {"type": "function", "name": "search_knowledge_base", "parameters":       
+      {"query": "Llama 2 models context window sizes"}}                         
+DEBUG ************************  METRICS  *************************              
+DEBUG * Tokens:                      input=572, output=32, total=604            
+DEBUG * Duration:                    0.2627s                                    
+DEBUG * Tokens per second:           121.7944 tokens/s                          
+DEBUG * Time to first token:         0.2627s                                    
+DEBUG ************************  METRICS  *************************              
+DEBUG -------------------- Groq Response End ---------------------              
+DEBUG Added RunOutput to Agent Session                                          
+DEBUG Created or updated AgentSession record:                                   
+      5edded90-efb7-42e4-ab2c-d7e0eef225de                                      
+DEBUG *** Agent Run End: c926c640-cfb7-4cac-a5f5-2696c05baa4e ****              
+DEBUG ***** Session ID: 7b246262-0806-480c-884e-316ad104b029 *****              
+DEBUG ***************** Agent ID: auto_rag_agent *****************              
+DEBUG Reading AgentSession: 7b246262-0806-480c-884e-316ad104b029                
+DEBUG Creating new AgentSession: 7b246262-0806-480c-884e-316ad104b029           
+DEBUG ** Agent Run Start: 526443a2-66a6-4cd0-a91c-ea2a7f04abd9 ***              
+DEBUG Processing tools for model                                                
+DEBUG Added tool web_search from websearch                                      
+DEBUG Added tool search_news from websearch                                     
+DEBUG Added tool search_knowledge_base                                          
+DEBUG ---------------- OpenAI Chat Response Start ----------------              
+DEBUG ------------- Model: openai/gpt-oss-120b:free --------------              
+DEBUG ========================== system ==========================              
+DEBUG - Search your knowledge base first.                                       
+      - If not found, search the internet.                                      
+      - Provide clear and concise answers.                                      
+      - CRITICAL: Always use native function calling parameters. Do NOT wrap    
+      tool calls in XML-like tags like '<function=...>' or '</function>'.       
+      Generate only the native tool call arguments.                             
+      <additional_information>                                                  
+      - Use markdown to format your answers.                                    
+      </additional_information>                                                 
+                                                                                
+      <knowledge_base>                                                          
+      You have a knowledge base you can search using the search_knowledge_base  
+      tool. Search before answering questions—don't assume you know the answer. 
+      For ambiguous questions, search first rather than asking for              
+      clarification.                                                            
+      </knowledge_base>                                                         
+DEBUG =========================== user ===========================              
+DEBUG What are the context window sizes of Llama 2 models?                      
+DEBUG Creating new sync OpenAI client for model openai/gpt-oss-120b:free        
+DEBUG Calling OpenAI with request parameters: {'tools': [{'type': 'function',   
+      'function': {'name': 'search_knowledge_base', 'description': 'Use this    
+      function to search the knowledge base for information about a query.',    
+      'parameters': {'type': 'object', 'properties': {'query': {'type':         
+      'string', 'description': 'The query to search for.'}}, 'required':        
+      ['query'], 'additionalProperties': False}}}, {'type': 'function',         
+      'function': {'name': 'search_news', 'description': 'Use this function to  
+      get the latest news from the web.', 'parameters': {'type': 'object',      
+      'properties': {'query': {'type': 'string', 'description': '(str) The query
+      to search for.'}, 'max_results': {'type': 'integer', 'description':       
+      '(optional, default=5) The maximum number of results to return.'}},       
+      'required': ['query']}, 'requires_confirmation': False,                   
+      'external_execution': False}}, {'type': 'function', 'function': {'name':  
+      'web_search', 'description': 'Use this function to search the web for a   
+      query.', 'parameters': {'type': 'object', 'properties': {'query': {'type':
+      'string', 'description': '(str) The query to search for.'}, 'max_results':
+      {'type': 'integer', 'description': '(optional, default=5) The maximum     
+      number of results to return.'}}, 'required': ['query']},                  
+      'requires_confirmation': False, 'external_execution': False}}]}           
+DEBUG ======================== assistant =========================              
+DEBUG <reasoning>                                                               
+      We need to search knowledge base.                                         
+      </reasoning>                                                              
+DEBUG Tool Calls:                                                               
+        - ID: 'chatcmpl-tool-a22b3bdc72d0388d'                                  
+          Name: 'search_knowledge_base'                                         
+          Arguments: 'query: Llama 2 context window size'                       
+DEBUG ************************  METRICS  *************************              
+DEBUG * Tokens:                      input=388, output=43, total=431, cached=64,
+      reasoning=9                                                               
+DEBUG * Duration:                    3.6140s                                    
+DEBUG * Tokens per second:           11.8983 tokens/s                           
+DEBUG ************************  METRICS  *************************              
+DEBUG Running: search_knowledge_base(query=Llama 2 context window size)         
+DEBUG Retrieving from knowledge base with filters: None                         
+DEBUG Getting 3 relevant documents for query: Llama 2 context window size       
+DEBUG Vector search query: SELECT ai.auto_rag_docs.id, ai.auto_rag_docs.name,   
+      ai.auto_rag_docs.meta_data, ai.auto_rag_docs.content,                     
+      ai.auto_rag_docs.embedding, ai.auto_rag_docs.usage,                       
+      ai.auto_rag_docs.embedding <=> :embedding_1 AS distance                   
+      FROM ai.auto_rag_docs ORDER BY ai.auto_rag_docs.embedding <=> :embedding_1
+       LIMIT :param_1                                                           
+INFO Found 0 documents                                                          
+DEBUG No relevant documents found for query                                     
+DEBUG Time to get references: 2.4512s                                           
+DEBUG =========================== tool ===========================              
+DEBUG Tool call Id: chatcmpl-tool-a22b3bdc72d0388d                              
+DEBUG No documents found                                                        
+DEBUG Calling OpenAI with request parameters: {'tools': [{'type': 'function',   
+      'function': {'name': 'search_knowledge_base', 'description': 'Use this    
+      function to search the knowledge base for information about a query.',    
+      'parameters': {'type': 'object', 'properties': {'query': {'type':         
+      'string', 'description': 'The query to search for.'}}, 'required':        
+      ['query'], 'additionalProperties': False}}}, {'type': 'function',         
+      'function': {'name': 'search_news', 'description': 'Use this function to  
+      get the latest news from the web.', 'parameters': {'type': 'object',      
+      'properties': {'query': {'type': 'string', 'description': '(str) The query
+      to search for.'}, 'max_results': {'type': 'integer', 'description':       
+      '(optional, default=5) The maximum number of results to return.'}},       
+      'required': ['query']}, 'requires_confirmation': False,                   
+      'external_execution': False}}, {'type': 'function', 'function': {'name':  
+      'web_search', 'description': 'Use this function to search the web for a   
+      query.', 'parameters': {'type': 'object', 'properties': {'query': {'type':
+      'string', 'description': '(str) The query to search for.'}, 'max_results':
+      {'type': 'integer', 'description': '(optional, default=5) The maximum     
+      number of results to return.'}}, 'required': ['query']},                  
+      'requires_confirmation': False, 'external_execution': False}}]}           
+DEBUG ***** Session ID: 7b246262-0806-480c-884e-316ad104b029 *****              
+DEBUG ***************** Agent ID: auto_rag_agent *****************              
+DEBUG Reading AgentSession: 7b246262-0806-480c-884e-316ad104b029                
+DEBUG ======================== assistant =========================              
+DEBUG <reasoning>                                                               
+      We need web search.                                                       
+      </reasoning>                                                              
+DEBUG Tool Calls:                                                               
+        - ID: 'chatcmpl-tool-9dd32d7c34e8b78d'                                  
+          Name: 'web_search'                                                    
+          Arguments: 'query: Llama 2 context window size 7B 13B 70B,            
+      max_results: 10'                                                          
+DEBUG ************************  METRICS  *************************              
+DEBUG * Tokens:                      input=435, output=56, total=491,           
+      cached=384, reasoning=5                                                   
+DEBUG * Duration:                    2.9083s                                    
+DEBUG * Tokens per second:           19.2553 tokens/s                           
+DEBUG ************************  METRICS  *************************              
+DEBUG Running: web_search(query=..., max_results=10)                            
+DEBUG Searching web for: Llama 2 context window size 7B 13B 70B using backend:  
+      duckduckgo                                                                
+DEBUG =========================== tool ===========================              
+DEBUG Tool call Id: chatcmpl-tool-9dd32d7c34e8b78d                              
+DEBUG [                                                                         
+        {                                                                       
+          "title": "what is the context size/context window of LLaMA? #267",    
+          "href": "https://github.com/meta-llama/llama/issues/267",             
+          "body": "What is the maximum token limit of llama? Is it 1024, 2048,  
+      4096, or longer? How much can it handle during the inference? I did find  
+      similar issues but no one has really answered the question, so I would    
+      appreciate any help I can get."                                           
+        },                                                                      
+        {                                                                       
+          "title": "Llama 2 is a collection of foundation language models       
+      ranging from 7B ...",                                                     
+          "href": "https://ollama.com/library/llama2",                          
+          "body": "Llama 2 is a collection of foundation language models ranging
+      from 7B to 70B parameters. 7b 13b 70b ollama run llama2"                  
+        },                                                                      
+        {                                                                       
+          "title": "Other Models | Model Cards and Prompt formats - Meta Llama",
+          "href":                                                               
+      "https://www.llama.com/docs/model-cards-and-prompt-formats/other-models/",
+          "body": "Meta Code Llama 70B has a different prompt template compared 
+      to 34B, 13B and 7B. It starts with a Source: system tag\u2014which can    
+      have an empty body\u2014and continues with alternating user or assistant  
+      values."                                                                  
+        },                                                                      
+        {                                                                       
+          "title": "Open Foundation AI Models - Meta's Llama2-7B-Chat",         
+          "href":                                                               
+      "https://daniel-deychakiwsky.github.io/open-foundation-ai-models-metas-lla
+      ma-2-7b-chat",                                                            
+          "body": "Llama 2 is an auto-regressive language model from Meta that  
+      uses an improved transformer architecture. It was released in a range of  
+      parameter sizes: 7B, 13B, and 70B, available in both pretrained and chat  
+      fine-tuned variations with a context window size of 4096 tokens. License" 
+        },                                                                      
+        {                                                                       
+          "title": "What You Need to Know About Meta's Llama 2 Model -          
+      Deepgram",                                                                
+          "href": "https://deepgram.com/learn/llama-2-llm-explained",           
+          "body": "(Meta also trained a 34B parameter Llama 2 model, but are not
+      releasing it.) Unlike Llama 1, which was just the general-purpose LLM,    
+      Llama 2 also comes in a chat-tuned variant, appropriately named Llama     
+      2-chat, which is available in sizes of 7B, 13B, 34B, and 70B parameters." 
+        },                                                                      
+        {                                                                       
+          "title": "Llama2: Open-Access Large Language Models",                 
+          "href": "https://www.emergentmind.com/topics/llama2",                 
+          "body": "Llama2 is a family of autoregressive transformer models      
+      characterized by enhanced context windows, grouped-query attention, and   
+      scalable performance across 7B to 70B parameters. It employs a two-stage  
+      alignment process combining supervised fine-tuning and RLHF with          
+      techniques like PPO and ghost attention to balance helpfulness and safety.
+      Benchmark evaluations show Llama2 achieving competitive ..."              
+        },                                                                      
+        {                                                                       
+          "title": "Llama 2 7B - Open Laboratory",                              
+          "href": "https://openlaboratory.com/models/llama-2-7b/",              
+          "body": "Overview Llama 2 7B is a large language model developed by   
+      Meta, forming part of the Llama 2 family of generative text models. Llama 
+      2 7B has 7 billion parameters and is part of the Llama 2 series, which    
+      also includes 13B and 70B parameter variants. Released for both research  
+      and commercial purposes, Llama 2 models facilitate access to language     
+      generation capabilities. The Llama 2-Chat ..."                            
+        },                                                                      
+        {                                                                       
+          "title": "Extend Ollama Context Length Beyond Default Limits 2026",   
+          "href": "https://markaicode.com/ollama-context-length-extend/",       
+          "body": "Extend Ollama context length beyond the 2048-token default   
+      using num_ctx, Modelfiles, and API parameters. Tested on Llama 3.3,       
+      Qwen2.5, and Mistral with CUDA and Metal."                                
+        },                                                                      
+        {                                                                       
+          "title": "meta-llama/Llama-2-70b \u00b7 Hugging Face",                
+          "href": "https://huggingface.co/meta-llama/Llama-2-70b",              
+          "body": "We're on a journey to advance and democratize artificial     
+      intelligence through open source and open science."                       
+        },                                                                      
+        {                                                                       
+          "title": "Best VRAM Cheat Sheet for Local LLMs: Every Model, Every    
+      Quant",                                                                   
+          "href": "https://insiderllm.com/guides/vram-requirements-local-llms/",
+          "body": "Exact VRAM for Qwen 3.6, Qwen 3.5, Llama, Mistral, and       
+      DeepSeek at Q3 through FP16. Lookup tables for 7B, 9B, 13B, 27B, 32B, 70B,
+      and 120B models with real measurements and GPU recommendations. Updated   
+      May 2026."                                                                
+        }                                                                       
+      ]                                                                         
+DEBUG Calling OpenAI with request parameters: {'tools': [{'type': 'function',   
+      'function': {'name': 'search_knowledge_base', 'description': 'Use this    
+      function to search the knowledge base for information about a query.',    
+      'parameters': {'type': 'object', 'properties': {'query': {'type':         
+      'string', 'description': 'The query to search for.'}}, 'required':        
+      ['query'], 'additionalProperties': False}}}, {'type': 'function',         
+      'function': {'name': 'search_news', 'description': 'Use this function to  
+      get the latest news from the web.', 'parameters': {'type': 'object',      
+      'properties': {'query': {'type': 'string', 'description': '(str) The query
+      to search for.'}, 'max_results': {'type': 'integer', 'description':       
+      '(optional, default=5) The maximum number of results to return.'}},       
+      'required': ['query']}, 'requires_confirmation': False,                   
+      'external_execution': False}}, {'type': 'function', 'function': {'name':  
+      'web_search', 'description': 'Use this function to search the web for a   
+      query.', 'parameters': {'type': 'object', 'properties': {'query': {'type':
+      'string', 'description': '(str) The query to search for.'}, 'max_results':
+      {'type': 'integer', 'description': '(optional, default=5) The maximum     
+      number of results to return.'}}, 'required': ['query']},                  
+      'requires_confirmation': False, 'external_execution': False}}]}           
+DEBUG Creating new AgentSession: 7b246262-0806-480c-884e-316ad104b029           
+DEBUG ** Agent Run Start: cf648c32-ba37-4e92-b164-053ce5a8aae4 ***              
+DEBUG Processing tools for model                                                
+DEBUG Added tool web_search from websearch                                      
+DEBUG Added tool search_news from websearch                                     
+DEBUG Added tool search_knowledge_base                                          
+DEBUG ---------------- OpenAI Chat Response Start ----------------              
+DEBUG ------------- Model: openai/gpt-oss-120b:free --------------              
+DEBUG ========================== system ==========================              
+DEBUG - Search your knowledge base first.                                       
+      - If not found, search the internet.                                      
+      - Provide clear and concise answers.                                      
+      - CRITICAL: Always use native function calling parameters. Do NOT wrap    
+      tool calls in XML-like tags like '<function=...>' or '</function>'.       
+      Generate only the native tool call arguments.                             
+      <additional_information>                                                  
+      - Use markdown to format your answers.                                    
+      </additional_information>                                                 
+                                                                                
+      <knowledge_base>                                                          
+      You have a knowledge base you can search using the search_knowledge_base  
+      tool. Search before answering questions—don't assume you know the answer. 
+      For ambiguous questions, search first rather than asking for              
+      clarification.                                                            
+      </knowledge_base>                                                         
+DEBUG =========================== user ===========================              
+DEBUG What are the context window sizes of Llama 2 models?                      
+DEBUG Calling OpenAI with request parameters: {'tools': [{'type': 'function',   
+      'function': {'name': 'search_knowledge_base', 'description': 'Use this    
+      function to search the knowledge base for information about a query.',    
+      'parameters': {'type': 'object', 'properties': {'query': {'type':         
+      'string', 'description': 'The query to search for.'}}, 'required':        
+      ['query'], 'additionalProperties': False}}}, {'type': 'function',         
+      'function': {'name': 'search_news', 'description': 'Use this function to  
+      get the latest news from the web.', 'parameters': {'type': 'object',      
+      'properties': {'query': {'type': 'string', 'description': '(str) The query
+      to search for.'}, 'max_results': {'type': 'integer', 'description':       
+      '(optional, default=5) The maximum number of results to return.'}},       
+      'required': ['query']}, 'requires_confirmation': False,                   
+      'external_execution': False}}, {'type': 'function', 'function': {'name':  
+      'web_search', 'description': 'Use this function to search the web for a   
+      query.', 'parameters': {'type': 'object', 'properties': {'query': {'type':
+      'string', 'description': '(str) The query to search for.'}, 'max_results':
+      {'type': 'integer', 'description': '(optional, default=5) The maximum     
+      number of results to return.'}}, 'required': ['query']},                  
+      'requires_confirmation': False, 'external_execution': False}}]}           
+DEBUG ======================== assistant =========================              
+DEBUG <reasoning>                                                               
+      We need to search knowledge base.                                         
+      </reasoning>                                                              
+DEBUG Tool Calls:                                                               
+        - ID: 'chatcmpl-tool-962b9bfbcd2931d5'                                  
+          Name: 'search_knowledge_base'                                         
+          Arguments: 'query: Llama 2 context window size'                       
+DEBUG ************************  METRICS  *************************              
+DEBUG * Tokens:                      input=388, output=43, total=431, cached=64,
+      reasoning=9                                                               
+DEBUG * Duration:                    2.6388s                                    
+DEBUG * Tokens per second:           16.2951 tokens/s                           
+DEBUG ************************  METRICS  *************************              
+DEBUG Running: search_knowledge_base(query=Llama 2 context window size)         
+DEBUG Retrieving from knowledge base with filters: None                         
+DEBUG Getting 3 relevant documents for query: Llama 2 context window size       
+DEBUG Vector search query: SELECT ai.auto_rag_docs.id, ai.auto_rag_docs.name,   
+      ai.auto_rag_docs.meta_data, ai.auto_rag_docs.content,                     
+      ai.auto_rag_docs.embedding, ai.auto_rag_docs.usage,                       
+      ai.auto_rag_docs.embedding <=> :embedding_1 AS distance                   
+      FROM ai.auto_rag_docs ORDER BY ai.auto_rag_docs.embedding <=> :embedding_1
+       LIMIT :param_1                                                           
+INFO Found 0 documents                                                          
+DEBUG No relevant documents found for query                                     
+DEBUG Time to get references: 2.0934s                                           
+DEBUG =========================== tool ===========================              
+DEBUG Tool call Id: chatcmpl-tool-962b9bfbcd2931d5                              
+DEBUG No documents found                                                        
+DEBUG Calling OpenAI with request parameters: {'tools': [{'type': 'function',   
+      'function': {'name': 'search_knowledge_base', 'description': 'Use this    
+      function to search the knowledge base for information about a query.',    
+      'parameters': {'type': 'object', 'properties': {'query': {'type':         
+      'string', 'description': 'The query to search for.'}}, 'required':        
+      ['query'], 'additionalProperties': False}}}, {'type': 'function',         
+      'function': {'name': 'search_news', 'description': 'Use this function to  
+      get the latest news from the web.', 'parameters': {'type': 'object',      
+      'properties': {'query': {'type': 'string', 'description': '(str) The query
+      to search for.'}, 'max_results': {'type': 'integer', 'description':       
+      '(optional, default=5) The maximum number of results to return.'}},       
+      'required': ['query']}, 'requires_confirmation': False,                   
+      'external_execution': False}}, {'type': 'function', 'function': {'name':  
+      'web_search', 'description': 'Use this function to search the web for a   
+      query.', 'parameters': {'type': 'object', 'properties': {'query': {'type':
+      'string', 'description': '(str) The query to search for.'}, 'max_results':
+      {'type': 'integer', 'description': '(optional, default=5) The maximum     
+      number of results to return.'}}, 'required': ['query']},                  
+      'requires_confirmation': False, 'external_execution': False}}]}           
+DEBUG ======================== assistant =========================              
+DEBUG <reasoning>                                                               
+      Need context window size: Llama 2 base models have 4096 tokens. Also Llama
+      2 70B? All same 4096. Provide answer.                                     
+      </reasoning>                                                              
+DEBUG **Llama 2 context window**                                                
+                                                                                
+      | Model size | Context‑window length |                                    
+      |------------|-----------------------|                                    
+      | Llama 2‑7B (pre‑trained & chat) | **4096 tokens** |                     
+      | Llama 2‑13B (pre‑trained & chat) | **4096 tokens** |                    
+      | Llama 2‑70B (pre‑trained & chat) | **4096 tokens** |                    
+                                                                                
+      All released Llama 2 models share the same maximum context length of      
+      **4096 tokens** (≈ 3 KB of text). This is an increase from the original   
+      LLaMA‑1 models, which were limited to 2048 tokens. If you need a longer   
+      context for a specific use‑case, you would have to employ a fine‑tuned    
+      variant that modifies the positional embeddings or use a downstream tool  
+      that extends the window (e.g., by chunking or employing external memory   
+      mechanisms).                                                              
+DEBUG ************************  METRICS  *************************              
+DEBUG * Tokens:                      input=1621, output=236, total=1857,        
+      cached=384, reasoning=28                                                  
+DEBUG * Duration:                    8.9028s                                    
+DEBUG * Tokens per second:           26.5087 tokens/s                           
+DEBUG * Time to first token:         8.9028s                                    
+DEBUG ************************  METRICS  *************************              
+DEBUG ----------------- OpenAI Chat Response End -----------------              
+DEBUG Added RunOutput to Agent Session                                          
+DEBUG ======================== assistant =========================              
+DEBUG <reasoning>                                                               
+      We need internet search.                                                  
+      </reasoning>                                                              
+DEBUG Tool Calls:                                                               
+        - ID: 'chatcmpl-tool-980856e42d1508a7'                                  
+          Name: 'web_search'                                                    
+          Arguments: 'query: Llama 2 context window size, max_results: 10'      
+DEBUG ************************  METRICS  *************************              
+DEBUG * Tokens:                      input=435, output=47, total=482,           
+      cached=384, reasoning=6                                                   
+DEBUG * Duration:                    3.2185s                                    
+DEBUG * Tokens per second:           14.6031 tokens/s                           
+DEBUG ************************  METRICS  *************************              
+DEBUG Running: web_search(query=Llama 2 context window size, max_results=10)    
+DEBUG Searching web for: Llama 2 context window size using backend: duckduckgo  
+DEBUG =========================== tool ===========================              
+DEBUG Tool call Id: chatcmpl-tool-980856e42d1508a7                              
+DEBUG [                                                                         
+        {                                                                       
+          "title": "LLM Context Window Comparison (2026): Every Model, Priced   
+      and ...",                                                                 
+          "href": "https://www.morphllm.com/llm-context-window-comparison",     
+          "body": "LLM Context Window Comparison Table (February 2026) Every    
+      major model, sorted by context window size. Pricing is per million tokens.
+      Where models have tiered pricing (e.g., different rates above 128K or 200K
+      tokens), the base rate is listed first with the surcharge rate after the  
+      slash."                                                                   
+        },                                                                      
+        {                                                                       
+          "title": "what is the context size/context window of LLaMA? #267",    
+          "href": "https://github.com/meta-llama/llama/issues/267",             
+          "body": "What is the maximum token limit of llama? Is it 1024, 2048,  
+      4096, or longer? How much can it handle during the inference? I did find  
+      similar issues but no one has really answered the question, so I would    
+      appreciate any help I can get."                                           
+        },                                                                      
+        {                                                                       
+          "title": "llama.cpp ctx-size: 3 Steps to Set Context Window Without   
+      OOM",                                                                     
+          "href":                                                               
+      "https://markaicode.com/tutorial/llamacpp-context-window-configuration/", 
+          "body": "Learn how to configure llama.cpp's context size (ctx-size) to
+      maximize token capacity without running out of GPU or CPU memory. 3-step  
+      guide with real metrics for developers."                                  
+        },                                                                      
+        {                                                                       
+          "title": "LLM Context Window Visualizer: GPT, Claude, Gemini, Llama   
+      Compared",                                                                
+          "href": "https://context-windows.damien-henry.com/",                  
+          "body": "Compare LLM context window sizes for GPT, Claude, Gemini,    
+      Llama, Mistral, DeepSeek, Qwen, and Grok. Visualize how much text fits in 
+      each model's token limit."                                                
+        },                                                                      
+        {                                                                       
+          "title": "Practical Long-Context LLM Inference with llama.cpp",       
+          "href":                                                               
+      "https://nullmirror.com/en/blog/2025-11-01-practical-long-context-llm-infe
+      rence-with-llama.cpp/",                                                   
+          "body": "We can run serious long-context inference on commodity Apple 
+      silicon, but long context is hard. In this post we'll touch on what       
+      Grouped-Query Attention (GQA) changes, and how to size a context window on
+      ~ 64 GB unified-memory class Apple M series machines, that we consider    
+      commodity hardware, using llama.cpp and Ollama. \"Attention\" and         
+      \"heads\" in brief Attention is the step where ..."                       
+        },                                                                      
+        {                                                                       
+          "title": "Local LLM Models and Their Max Context Windows: A Reference 
+      Table",                                                                   
+          "href": "https://www.hardware-corner.net/llm-models-context-sizes/",  
+          "body": "A table of popular LLMs used in the local inference          
+      community, along with their parameter counts and maximum context windows."
+        },                                                                      
+        {                                                                       
+          "title": "Strategies and Techniques for Managing the Size of the      
+      Context Window ...",                                                      
+          "href":                                                               
+      "https://mohdmus99.medium.com/strategies-and-techniques-for-managing-the-s
+      ize-of-the-context-window-when-using-llm-large-3c2dbc5dcc3a",             
+          "body": "5. Dynamic Context Adjustment: The model adjusts the context 
+      window size based on the complexity and needs of the task, allocating more
+      tokens to complex queries and fewer to simpler ones. These techniques are 
+      commonly used in models like ChatGPT and Copilot to manage the context    
+      window effectively."                                                      
+        },                                                                      
+        {                                                                       
+          "title": "How do I find out the context size of a model? :            
+      r/LocalLLaMA - Reddit",                                                   
+          "href":                                                               
+      "https://www.reddit.com/r/LocalLLaMA/comments/16oae0h/how_do_i_find_out_th
+      e_context_size_of_a_model/",                                              
+          "body": "The context size of all llama-2 chat based models is 4096    
+      tokens, unless you apply rope scaling at time of execution or modify the  
+      base model with the other scaling technique in training (forget the name  
+      of this)."                                                                
+        },                                                                      
+        {                                                                       
+          "title": "Llama 2 is a collection of foundation language models       
+      ranging from 7B ...",                                                     
+          "href": "https://ollama.com/library/llama2",                          
+          "body": "Readme Llama 2 is released by Meta Platforms, Inc. This model
+      is trained on 2 trillion tokens, and by default supports a context length 
+      of 4096. Llama 2 Chat models are fine-tuned on over 1 million human       
+      annotations, and are made for chat. CLI Open the terminal and run ollama  
+      run llama2 API Example using curl: ... API documentation Memory ..."      
+        },                                                                      
+        {                                                                       
+          "title": "TheBloke/Llama-2-7B-GGUF \u00b7 Maximum context length      
+      (512)",                                                                   
+          "href":                                                               
+      "https://huggingface.co/TheBloke/Llama-2-7B-GGUF/discussions/2",          
+          "body": "I thought Llama2's maximum context length was 4,096 tokens.  
+      When I went to perform an inference through this model I saw that the     
+      maximum context length is 512. What is the reason for this modifica..."   
+        }                                                                       
+      ]                                                                         
+DEBUG Calling OpenAI with request parameters: {'tools': [{'type': 'function',   
+      'function': {'name': 'search_knowledge_base', 'description': 'Use this    
+      function to search the knowledge base for information about a query.',    
+      'parameters': {'type': 'object', 'properties': {'query': {'type':         
+      'string', 'description': 'The query to search for.'}}, 'required':        
+      ['query'], 'additionalProperties': False}}}, {'type': 'function',         
+      'function': {'name': 'search_news', 'description': 'Use this function to  
+      get the latest news from the web.', 'parameters': {'type': 'object',      
+      'properties': {'query': {'type': 'string', 'description': '(str) The query
+      to search for.'}, 'max_results': {'type': 'integer', 'description':       
+      '(optional, default=5) The maximum number of results to return.'}},       
+      'required': ['query']}, 'requires_confirmation': False,                   
+      'external_execution': False}}, {'type': 'function', 'function': {'name':  
+      'web_search', 'description': 'Use this function to search the web for a   
+      query.', 'parameters': {'type': 'object', 'properties': {'query': {'type':
+      'string', 'description': '(str) The query to search for.'}, 'max_results':
+      {'type': 'integer', 'description': '(optional, default=5) The maximum     
+      number of results to return.'}}, 'required': ['query']},                  
+      'requires_confirmation': False, 'external_execution': False}}]}           
+DEBUG Created or updated AgentSession record:                                   
+      7b246262-0806-480c-884e-316ad104b029                                      
+DEBUG *** Agent Run End: 526443a2-66a6-4cd0-a91c-ea2a7f04abd9 ****              
+DEBUG ======================== assistant =========================              
+DEBUG <reasoning>                                                               
+      We need context window sizes for Llama 2 models: 7B, 13B, 70B, and chat   
+      variants. Likely 4096 tokens default. Some variants support 128k via      
+      fine-tuning. Provide info. We'll answer.                                  
+      </reasoning>                                                              
+DEBUG **Llama 2 family – maximum context (token) window**                       
+                                                                                
+      | Model (parameter count) | Default context window* | Extended /          
+      “long‑context” variants† |                                                
+      |--------------------------|------------------------|---------------------
+      -----------------|                                                        
+      | Llama 2 7B               | **4 096 tokens** | 8 192 tokens (via         
+      *rope‑scaling* in llama‑cpp/transformers) |                               
+      | Llama 2 13B              | **4 096 tokens** | 8 192 tokens              
+      (rope‑scaling) |                                                          
+      | Llama 2 70B              | **4 096 tokens** | 8 192 tokens              
+      (rope‑scaling) |                                                          
+      | Llama 2‑Chat 7B          | **4 096 tokens** | 8 192 tokens              
+      (rope‑scaling) |                                                          
+      | Llama 2‑Chat 13B         | **4 096 tokens** | 8 192 tokens              
+      (rope‑scaling) |                                                          
+      | Llama 2‑Chat 70B         | **4 096 tokens** | 8 192 tokens              
+      (rope‑scaling) |                                                          
+                                                                                
+      \* **Default context window** – the size baked into the released          
+      checkpoint and the value used by most inference back‑ends (Ollama, vLLM,  
+      🤗 Transformers, etc.) when you load the model without any modification.  
+                                                                                
+      \† **Extended/long‑context variants** – Llama 2 was trained with RoPE     
+      (Rotary Positional Embedding) that can be *scaled* at inference time. By  
+      applying the `rope_scaling` (or `--rope-scaling`/`--ctx-size` in          
+      llama‑cpp, `--max_position_embeddings` in vLLM, etc.) you can double the  
+      window to **8 192 tokens** without re‑training.                           
+                                                                                
+      Meta has not released official checkpoints with a larger window (e.g., 16 
+      k or 32 k); any larger windows you see in the community are achieved by   
+      applying the same scaling tricks or by fine‑tuning a model with a longer  
+      positional embedding.                                                     
+                                                                                
+      ### Quick reference for common tooling                                    
+                                                                                
+      | Tool / Library | How to enable the 8 192‑token window |                 
+      |----------------|--------------------------------------|                 
+      | **🤗 Transformers** (Python) | ```python\nfrom transformers import      
+      AutoModelForCausalLM, AutoTokenizer\nmodel =                              
+      AutoModelForCausalLM.from_pretrained('meta-llama/Llama-2-7b-hf',          
+      torch_dtype='auto')\nmodel.config.rope_scaling = {'type': 'linear',       
+      'factor': 2.0}\n``` |                                                     
+      | **llama‑cpp** (CLI) | `--ctx-size 8192 --rope-scaling linear` (or       
+      `--rope-scaling factor=2.0`) |                                            
+      | **vLLM** | `--rope-scaling factor 2.0 --max-model-len 8192` |           
+      | **Ollama** (as of 2024‑2025) | `ollama run llama2 --max-context-length  
+      8192` (experimental flag) |                                               
+                                                                                
+      ### Why 4 096 tokens?                                                     
+                                                                                
+      - Llama 2 was released in early 2023 when a 4 k context window was the    
+      de‑facto standard for most large language models.                         
+      - This size balances memory consumption (attention matrix scales with     
+      *O(N²)*) and the typical lengths of prompts used in chat and              
+      instruction‑following tasks.                                              
+                                                                                
+      ### Bottom line                                                           
+                                                                                
+      - **All official Llama 2 checkpoints** (both base and chat versions)      
+      support a **4 096‑token** context window out‑of‑the‑box.                  
+      - With simple RoPE‑scaling you can safely extend that to **8 192 tokens** 
+      on most hardware; beyond that you would need a custom‑trained model with  
+      larger positional embeddings.                                             
+DEBUG ************************  METRICS  *************************              
+DEBUG * Tokens:                      input=1595, output=881, total=2476,        
+      cached=384, reasoning=46                                                  
+DEBUG * Duration:                    23.0736s                                   
+DEBUG * Tokens per second:           38.1821 tokens/s                           
+DEBUG * Time to first token:         23.0736s                                   
+DEBUG ************************  METRICS  *************************              
+DEBUG ----------------- OpenAI Chat Response End -----------------              
+DEBUG Added RunOutput to Agent Session                                          
+DEBUG Created or updated AgentSession record:                                   
+      7b246262-0806-480c-884e-316ad104b029                                      
+DEBUG *** Agent Run End: cf648c32-ba37-4e92-b164-053ce5a8aae4 ****              
+  Stopping...

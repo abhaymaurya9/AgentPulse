@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routes.agents import router as agents_router
+from routes.evaluations import router as eval_router
 
 app = FastAPI()
 
@@ -13,7 +14,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(agents_router)
+app.include_router(agents_router, prefix="/api")
+app.include_router(eval_router, prefix="/api")
 
 
 @app.get("/")

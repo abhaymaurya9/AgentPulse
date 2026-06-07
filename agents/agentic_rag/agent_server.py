@@ -74,10 +74,14 @@ async def run_agent(body: QuestionRequest):
 
     answer = ""
 
-    if hasattr(response, "content"):
-        answer = response.content
-    else:
-        answer = str(response)
+    if response is not None:
+        if hasattr(response, "content") and response.content is not None:
+            answer = response.content
+        else:
+            answer = str(response)
+
+    if answer is None:
+        answer = ""
 
     latency = int((time.time() - start) * 1000)
 
@@ -88,7 +92,7 @@ async def run_agent(body: QuestionRequest):
         token_count = len(enc.encode(answer))
 
     except Exception:
-        token_count = len(answer.split()) * 1.3
+        token_count = len(answer.split()) * 1.3 if answer else 0
 
     return {
         "agent_name": "Agentic RAG",

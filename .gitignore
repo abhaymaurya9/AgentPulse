@@ -25,6 +25,8 @@ tmp/
 # Qdrant local data (future)
 qdrant_storage/
 **/qdrant_storage/
+local_qdrant_db/
+**/local_qdrant_db/
 
 # Streamlit cache
 .streamlit/

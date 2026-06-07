@@ -23,4 +23,12 @@ async def get_run(run_id: str):
     run    = supabase.table("eval_runs").select("*").eq("id", run_id).execute().data
     traces = supabase.table("run_traces").select("*")\
              .eq("eval_run_id", run_id).order("step_number").execute().data
+    
+    # Retrieve benchmark tasks to fetch the ground truth matching each trace question
+    tasks = supabase.table("benchmark_tasks").select("question", "ground_truth").execute().data
+    task_map = {t["question"]: t["ground_truth"] for t in tasks} if tasks else {}
+    
+    for trace in traces:
+        trace["ground_truth"] = task_map.get(trace["step_input"], "No expected ground truth logged.")
+        
     return {"run": run[0] if run else None, "traces": traces}

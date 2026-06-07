@@ -1,8 +1,30 @@
 .env
 .env.local
-venv/
+
+# Python
 __pycache__/
 *.pyc
+
+# Venvs
+venv/
+**/venv/
+.venv/
+**/.venv/
+
+# Node
 node_modules/
 .next/
+
+# macOS
 .DS_Store
+
+# LanceDB / vector DB data
+tmp/
+**/tmp/
+
+# Qdrant local data (future)
+qdrant_storage/
+**/qdrant_storage/
+
+# Streamlit cache
+.streamlit/

@@ -157,6 +157,8 @@ def query_agent(agent_id: str, body: dict):
         raise HTTPException(404, "Agent not found")
     
     endpoint_url = agent[0]["endpoint_url"]
+    if os.getenv("RUNNING_IN_DOCKER") == "true":
+        endpoint_url = endpoint_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
     question = body.get("question", "")
     
     try:

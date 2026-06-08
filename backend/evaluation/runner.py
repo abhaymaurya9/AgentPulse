@@ -1,9 +1,11 @@
-import httpx, time
+import httpx, time, os
 from evaluation.ragas_eval import run_ragas
 from db.supabase_client import supabase
 
 def call_agent(endpoint_url, question):
     """Agent ko question bhejo, answer + latency lo"""
+    if os.getenv("RUNNING_IN_DOCKER") == "true":
+        endpoint_url = endpoint_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
     start = time.time()
     try:
         res = httpx.post(

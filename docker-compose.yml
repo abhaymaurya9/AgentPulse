@@ -1,0 +1,49 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - RUNNING_IN_DOCKER=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env.local
+    restart: always
+
+  agentic_rag:
+    build:
+      context: ./agents/agentic_rag
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./agents/agentic_rag/.env
+    restart: always
+
+  autonomous_rag:
+    build:
+      context: ./agents/autonomous_rag
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./agents/autonomous_rag/.env
+    restart: always
+
+  corrective_rag:
+    build:
+      context: ./agents/corrective_rag
+    ports:
+      - "8003:8003"
+    env_file:
+      - ./agents/corrective_rag/.env
+    restart: always

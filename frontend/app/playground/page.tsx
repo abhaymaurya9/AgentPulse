@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getAgents, queryAgent } from "@/lib/api";
-import { Cpu, Send, Terminal, Clock, Zap, MessageSquare, AlertCircle } from "lucide-react";
+import { Send, Terminal, Clock, Zap, MessageSquare, AlertCircle, Loader2 } from "lucide-react";
 
 type Agent = {
   id: string;
@@ -31,7 +31,8 @@ export default function PlaygroundPage() {
           setSelectedAgentId(data[0].id);
         }
       } catch (err) {
-        console.error("Failed to load agents:", err);
+        const error = err as Error;
+        console.warn("Failed to load agents:", error.message || error);
         setError("Could not load agents. Make sure the backend server is running.");
       } finally {
         setLoadingAgents(false);
@@ -52,9 +53,10 @@ export default function PlaygroundPage() {
       setQueryResponse(null);
       const res = await queryAgent(selectedAgentId, customQuestion);
       setQueryResponse(res);
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.response?.data?.detail || "Failed to query the agent. Please check connection and try again.");
+    } catch (err) {
+      const apiError = err as { message?: string; response?: { data?: { detail?: string } } };
+      console.warn("Failed to query the agent:", apiError.message || apiError);
+      setError(apiError.response?.data?.detail || "Failed to query the agent. Please check connection and try again.");
     } finally {
       setQuerying(false);
     }
@@ -201,11 +203,11 @@ export default function PlaygroundPage() {
               <button
                 type="submit"
                 disabled={querying || !customQuestion.trim() || !selectedAgentId}
-                className="cursor-pointer inline-flex items-center justify-center rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-855 px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed"
+                className="cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 disabled:bg-gray-850 px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:cursor-not-allowed"
               >
                 {querying ? (
                   <div className="flex items-center gap-1.5">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
                     <span>Sending...</span>
                   </div>
                 ) : (

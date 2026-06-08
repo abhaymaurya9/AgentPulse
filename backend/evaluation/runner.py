@@ -9,7 +9,7 @@ def call_agent(endpoint_url, question):
         res = httpx.post(
             endpoint_url,
             json={"question": question},
-            timeout=30.0
+            timeout=90.0
         )
         data = res.json()
         return {
@@ -82,18 +82,22 @@ def composite_score(faithfulness: float, context_precision: float, context_recal
 
     return round((rag_score*0.50 + task_success*0.30 + efficiency*0.20) * 100, 2)
 
-def check_drift(agent_id: str, current_score: float) -> bool:
-    """Check if composite score has dropped by >= 10% compared to the last run"""
+def check_drift(agent_id: str, current_score: float) -> tuple[bool, float]:
+    """Check if composite score has dropped by >= 10% compared to the rolling average of up to the last 3 runs"""
     prev = supabase.table("eval_runs").select("composite_score")\
            .eq("agent_id", agent_id).order("run_date", desc=True)\
-           .limit(1).execute().data
+           .limit(3).execute().data
     if not prev:
-        return False
-    last_score = prev[0]["composite_score"]
-    if last_score <= 0.0:
-        return False
-    drop = (last_score - current_score) / last_score * 100
-    return drop >= 10
+        return False, 0.0
+    
+    scores = [r["composite_score"] for r in prev]
+    avg_last_runs = sum(scores) / len(scores)
+    
+    if avg_last_runs <= 0.0:
+        return False, 0.0
+        
+    drop = (avg_last_runs - current_score) / avg_last_runs * 100
+    return drop >= 10, round(drop, 2)
 
 def run_evaluation(agent_id: str):
     """Ek agent ka complete evaluation"""
@@ -102,7 +106,7 @@ def run_evaluation(agent_id: str):
     agent = supabase.table("agents").select("*").eq("id", agent_id).execute().data[0]
 
     # 2. Benchmark tasks lo
-    tasks = supabase.table("benchmark_tasks").select("*").limit(5).execute().data
+    tasks = supabase.table("benchmark_tasks").select("*").order("created_at", desc=True).limit(5).execute().data
     if not tasks:
         return {"error": "No benchmark tasks found"}
 
@@ -166,7 +170,48 @@ def run_evaluation(agent_id: str):
     avg  = {k: round(sum(s[k] for s in all_scores) / len(all_scores), 3) for k in keys}
 
     # 9. Drift check
-    drift = check_drift(agent_id, avg["composite"])
+    drift, drop_pct = check_drift(agent_id, avg["composite"])
+    
+    # 9.2 Diagnose Drift Reason
+    drift_reason = None
+    if drift:
+        prev_runs = supabase.table("eval_runs").select("*")\
+                    .eq("agent_id", agent_id).order("run_date", desc=True)\
+                    .limit(3).execute().data
+        reasons = []
+        if prev_runs:
+            avg_faith = sum(r["faithfulness_score"] for r in prev_runs) / len(prev_runs)
+            avg_latency = sum(r["latency_ms"] for r in prev_runs) / len(prev_runs)
+            avg_success = sum(r["task_success_rate"] for r in prev_runs) / len(prev_runs)
+            avg_precision = sum(r["context_precision"] for r in prev_runs) / len(prev_runs)
+            
+            current_faith = avg["faithfulness"]
+            current_latency = avg["latency_ms"]
+            current_success = avg["task_success"]
+            current_precision = avg["context_precision"]
+            
+            # Faithfulness drop > 15%
+            if avg_faith > 0 and ((avg_faith - current_faith) / avg_faith * 100) > 15:
+                reasons.append("Retrieval quality degraded")
+            
+            # Latency increase > 50%
+            if avg_latency > 0 and ((current_latency - avg_latency) / avg_latency * 100) > 50:
+                reasons.append("Response time increased significantly")
+                
+            # Task success drop > 20%
+            if avg_success > 0 and ((avg_success - current_success) / avg_success * 100) > 20:
+                reasons.append("Task completion rate dropped")
+                
+            # Context precision drop > 15%
+            if avg_precision > 0 and ((avg_precision - current_precision) / avg_precision * 100) > 15:
+                reasons.append("Context relevance degraded")
+                
+        if not reasons:
+            drift_reason = "General performance drop"
+        elif len(reasons) == 1:
+            drift_reason = reasons[0]
+        else:
+            drift_reason = "Multiple metrics degraded"
 
     # 10. Supabase mein save karo
     run = supabase.table("eval_runs").insert({
@@ -179,7 +224,8 @@ def run_evaluation(agent_id: str):
         "task_success_rate":  avg["task_success"],
         "answer_quality":     avg["answer_relevancy"],
         "composite_score":    avg["composite"],
-        "drift_detected":     drift
+        "drift_detected":     drift,
+        "drift_reason":       drift_reason
     }).execute().data[0]
 
     # 11. Traces save karo
@@ -190,5 +236,7 @@ def run_evaluation(agent_id: str):
 
     print(f"✅ Composite Score: {avg['composite']}")
     print(f"Drift: {drift}")
+    if drift_reason:
+        print(f"Drift Reason: {drift_reason}")
 
-    return {"eval_run_id": run["id"], "scores": avg, "drift": drift}
+    return {"eval_run_id": run["id"], "scores": avg, "drift": drift, "drift_reason": drift_reason}

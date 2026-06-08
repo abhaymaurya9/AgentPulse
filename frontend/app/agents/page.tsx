@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getAgents, getAgentRuns, triggerEvaluation } from "@/lib/api";
-import { Cpu, ExternalLink, Activity, ArrowRight, Play, Plus, RefreshCw, AlertCircle } from "lucide-react";
+import { Cpu, ExternalLink, Activity, Play, Plus, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import DriftBadge from "@/components/ui/DriftBadge";
-import clsx from "clsx";
 
 type Agent = {
   id: string;
@@ -44,7 +43,8 @@ export default function AgentsPage() {
               driftDetected: latest ? latest.drift_detected : false,
             };
           } catch (err) {
-            console.error(`Error loading runs for agent ${agent.id}:`, err);
+            const error = err as Error;
+            console.warn(`Error loading runs for agent ${agent.id}:`, error.message || error);
             return {
               ...agent,
               totalRuns: 0,
@@ -56,7 +56,8 @@ export default function AgentsPage() {
       );
       setAgents(data);
     } catch (err) {
-      console.error(err);
+      const error = err as Error;
+      console.warn("Failed to load agents:", error.message || error);
       setError("Failed to load agents. Please check if the backend service is running.");
     } finally {
       if (showLoading) setLoading(false);
@@ -64,6 +65,7 @@ export default function AgentsPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAgentsList();
   }, []);
 
@@ -76,7 +78,8 @@ export default function AgentsPage() {
       alert("Evaluation triggered successfully! Refreshing in 3 seconds.");
       setTimeout(() => fetchAgentsList(false), 3000);
     } catch (err) {
-      console.error(err);
+      const error = err as Error;
+      console.warn("Failed to trigger evaluation run:", error.message || error);
       alert("Failed to trigger evaluation run.");
     } finally {
       setAgents((prev) =>
@@ -161,7 +164,7 @@ export default function AgentsPage() {
         <div>
           <Link
             href="/agents/register"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 transition shadow-md shadow-indigo-600/20"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 shadow-md shadow-primary/10 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Register Agent
@@ -174,19 +177,19 @@ export default function AgentsPage() {
         {agents.map((agent) => (
           <div
             key={agent.id}
-            className="flex flex-col lg:flex-row justify-between lg:items-center rounded-xl border border-gray-800 bg-gray-950/20 p-6 gap-6 hover:border-gray-750 hover:bg-gray-950/40 transition duration-300"
+            className="flex flex-col lg:flex-row justify-between lg:items-center rounded-xl border border-gray-800 bg-card/25 p-6 gap-6 hover:border-gray-750 hover:bg-card/40 transition duration-300"
           >
             {/* Left Column: General Info */}
             <div className="flex-1 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/15">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/15">
                   <Cpu className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="font-bold text-lg text-white">
                     {agent.name}
                   </h3>
-                  <p className="text-xs font-mono text-indigo-400">
+                  <p className="text-xs font-mono text-primary">
                     {agent.model_name}
                   </p>
                 </div>
@@ -206,7 +209,7 @@ export default function AgentsPage() {
                     href={agent.endpoint_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:underline text-indigo-400"
+                    className="hover:underline text-primary animate-pulse"
                   >
                     {agent.endpoint_url}
                   </a>
@@ -223,7 +226,7 @@ export default function AgentsPage() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Accuracy Score</p>
-                  <p className="text-2xl font-black text-indigo-400 mt-1">
+                  <p className="text-2xl font-black text-primary mt-1">
                     {typeof agent.lastScore === "number" ? agent.lastScore.toFixed(1) : agent.lastScore}
                   </p>
                 </div>
@@ -234,17 +237,21 @@ export default function AgentsPage() {
                 <div className="flex gap-2 w-full">
                   <Link
                     href={`/agents/${agent.id}`}
-                    className="flex-1 text-center justify-center inline-flex items-center gap-1.5 rounded-lg border border-gray-800 hover:border-gray-700 bg-gray-900/10 hover:bg-gray-900/40 px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white transition"
+                    className="flex-1 text-center justify-center inline-flex items-center gap-1.5 rounded-lg border border-gray-800 hover:border-gray-700 bg-card/40 hover:bg-card px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white transition-all duration-200"
                   >
                     View Details
                   </Link>
                   <button
                     onClick={() => handleEvaluate(agent.id)}
                     disabled={agent.evaluating}
-                    className="cursor-pointer inline-flex items-center justify-center rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-850 px-3 py-2 text-xs font-semibold text-white transition disabled:cursor-not-allowed"
+                    className="cursor-pointer inline-flex items-center justify-center rounded-lg bg-primary hover:bg-primary/90 disabled:bg-gray-850 px-3 py-2 text-xs font-semibold text-white transition duration-200 disabled:cursor-not-allowed min-w-[44px]"
+                    title="Evaluate Agent"
                   >
-                    <Play className={clsx("h-3.5 w-3.5", agent.evaluating && "animate-pulse")} />
-                    {agent.evaluating ? "..." : ""}
+                    {agent.evaluating ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Play className="h-3.5 w-3.5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -253,20 +260,20 @@ export default function AgentsPage() {
         ))}
 
         {agents.length === 0 && (
-          <div className="border border-dashed border-gray-800 rounded-xl p-12 text-center space-y-4">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/15">
+          <div className="border border-dashed border-gray-800 rounded-xl p-12 text-center space-y-4 bg-card/10">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/20">
               <Cpu className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-bold text-white">No agents yet</h3>
+            <h3 className="text-lg font-bold text-white">Agents Catalog is Empty</h3>
             <p className="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed">
-              Register your first RAG agent pipeline and start benchmark evaluation tracking today.
+              No pipelines are registered. Connect a new agent to list it in the catalog and run benchmark tasks.
             </p>
             <Link
               href="/agents/register"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 transition shadow-md shadow-indigo-600/20"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 shadow-md shadow-primary/10 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
-              Register Your First Agent
+              Register Agent
             </Link>
           </div>
         )}

@@ -9,6 +9,11 @@ import ScoreCard from "@/components/ui/ScoreCard";
 import DriftBadge from "@/components/ui/DriftBadge";
 import { ArrowLeft, PlayCircle, Clock } from "lucide-react";
 
+function parseUTCDate(dateStr: string | undefined | null): Date {
+  if (!dateStr) return new Date();
+  return new Date(dateStr.endsWith("Z") ? dateStr : dateStr + "Z");
+}
+
 type RunDetails = {
   run: {
     id: string;
@@ -21,6 +26,7 @@ type RunDetails = {
     latency_ms: number;
     composite_score: number;
     drift_detected: boolean;
+    version?: string;
   } | null;
   traces: {
     id: string;
@@ -66,13 +72,14 @@ export default function RunReplayPage() {
         const agentRuns = await getAgentRuns(agentId);
         if (agentRuns && agentRuns.length > 0) {
           const sortedRuns = [...agentRuns].reverse(); // oldest first
-          const index = sortedRuns.findIndex((r) => r.id === runId);
+          const index = sortedRuns.findIndex((r: { id: string }) => r.id === runId);
           if (index !== -1) {
             setRunNumber(index + 1);
           }
         }
       } catch (err) {
-        console.error("Error fetching run details:", err);
+        const error = err as Error;
+        console.warn("Error fetching run details:", error.message || error);
       } finally {
         setLoading(false);
       }
@@ -143,9 +150,9 @@ export default function RunReplayPage() {
 
   // Color helper mapping for 0-100 threshold scale
   const getScoreColor = (score: number) => {
-    if (score > 70) return "emerald";
-    if (score >= 40) return "amber";
-    return "rose";
+    if (score > 70) return "success";
+    if (score >= 40) return "warning";
+    return "danger";
   };
 
   return (
@@ -167,7 +174,7 @@ export default function RunReplayPage() {
           <span>/</span>
           <span className="text-indigo-400">RUN #{runNumber} REPLAY</span>
         </nav>
-
+ 
         {/* Back navigation button */}
         <div>
           <Link
@@ -179,7 +186,7 @@ export default function RunReplayPage() {
           </Link>
         </div>
       </div>
-
+ 
       {/* Header Info */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-900 pb-6">
         <div className="space-y-3">
@@ -199,10 +206,10 @@ export default function RunReplayPage() {
           </div>
           <div className="text-xs text-gray-400 flex items-center gap-1.5 font-mono">
             <Clock className="h-4 w-4 text-gray-500" />
-            Executed: {new Date(run.run_date).toLocaleString()}
+            Executed: {parseUTCDate(run.run_date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
           </div>
         </div>
-
+ 
         <div className="flex items-center gap-4">
           <DriftBadge driftDetected={run.drift_detected} />
           <div className="flex flex-col text-right">
@@ -211,7 +218,7 @@ export default function RunReplayPage() {
           </div>
         </div>
       </div>
-
+ 
       {/* 4 Score Summary Cards */}
       <div className="space-y-4">
         <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">Run Score Summary</h3>

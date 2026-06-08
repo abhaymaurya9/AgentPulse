@@ -32,3 +32,38 @@ async def get_run(run_id: str):
         trace["ground_truth"] = task_map.get(trace["step_input"], "No expected ground truth logged.")
         
     return {"run": run[0] if run else None, "traces": traces}
+
+@router.get("/agents/{agent_id}/drift-history")
+async def get_drift_history(agent_id: str):
+    # Fetch ALL runs of the agent in desc order by date to compute historical rolling average drops
+    all_runs = supabase.table("eval_runs").select("*")\
+               .eq("agent_id", agent_id).order("run_date", desc=True).execute().data
+    if not all_runs:
+        return []
+        
+    drift_events = []
+    
+    for i, run in enumerate(all_runs):
+        if not run.get("drift_detected"):
+            continue
+            
+        preceding_runs = all_runs[i + 1 : i + 4] # up to 3 preceding runs
+        if not preceding_runs:
+            drop_pct = 0.0
+        else:
+            scores = [r["composite_score"] for r in preceding_runs]
+            avg = sum(scores) / len(scores)
+            if avg > 0:
+                drop_pct = round((avg - run["composite_score"]) / avg * 100, 2)
+            else:
+                drop_pct = 0.0
+                
+        drift_events.append({
+            "run_id": run["id"],
+            "run_date": run["run_date"],
+            "composite_score": run["composite_score"],
+            "drift_reason": run.get("drift_reason") or "General performance drop",
+            "score_drop_percentage": max(0.0, drop_pct)
+        })
+        
+    return drift_events

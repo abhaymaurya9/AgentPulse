@@ -10,9 +10,13 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  TooltipProps,
 } from "recharts";
 import { TrendingUp } from "lucide-react";
+
+function parseUTCDate(dateStr: string | undefined | null): Date {
+  if (!dateStr) return new Date();
+  return new Date(dateStr.endsWith("Z") ? dateStr : dateStr + "Z");
+}
 
 type EvalRun = {
   run_date: string;
@@ -29,6 +33,32 @@ type EvolutionGraphProps = {
   agentName?: string;
 };
 
+interface CustomDotProps {
+  cx?: number;
+  cy?: number;
+  payload?: {
+    drift_detected?: boolean;
+  };
+  activeMetricColor?: string;
+  index?: number;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: {
+    payload?: {
+      drift_detected?: boolean;
+      composite_score?: number;
+      faithfulness_score?: number;
+      context_precision?: number;
+      context_recall?: number;
+    };
+    value?: number | string;
+    name?: string;
+  }[];
+  label?: string;
+}
+
 type MetricKey = "composite_score" | "faithfulness_score" | "context_precision" | "context_recall";
 
 const METRICS: { key: MetricKey; label: string; color: string }[] = [
@@ -39,11 +69,11 @@ const METRICS: { key: MetricKey; label: string; color: string }[] = [
 ];
 
 // Custom dot renderer: red & large for drift, normal otherwise
-function CustomDot(props: any) {
+function CustomDot(props: CustomDotProps) {
   const { cx, cy, payload, activeMetricColor } = props;
   if (!cx || !cy) return null;
 
-  if (payload.drift_detected) {
+  if (payload?.drift_detected) {
     return (
       <g>
         {/* Outer glow ring */}
@@ -67,11 +97,11 @@ function CustomDot(props: any) {
 }
 
 // Custom active dot (hover)
-function CustomActiveDot(props: any) {
+function CustomActiveDot(props: CustomDotProps) {
   const { cx, cy, payload, activeMetricColor } = props;
   if (!cx || !cy) return null;
 
-  if (payload.drift_detected) {
+  if (payload?.drift_detected) {
     return (
       <g>
         <circle cx={cx} cy={cy} r={12} fill="rgba(239,68,68,0.2)" stroke="none" />
@@ -93,24 +123,57 @@ function CustomActiveDot(props: any) {
 }
 
 // Custom tooltip with drift warning
-function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
 
   const data = payload[0]?.payload;
-  const value = payload[0]?.value;
-  const metricName = payload[0]?.name;
+  if (!data) return null;
 
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 shadow-xl text-sm space-y-1.5">
-      <div className="text-gray-400 text-[11px] font-semibold">{label}</div>
-      <div className="flex items-center gap-2">
-        <span className="text-white font-bold text-base">
-          {typeof value === "number" ? value.toFixed(2) : value}
-        </span>
-        <span className="text-gray-500 text-[10px] uppercase tracking-wider">{metricName}</span>
+    <div className="bg-card border border-gray-700/60 rounded-xl p-4 shadow-xl text-xs space-y-3 min-w-[210px] backdrop-blur-md">
+      <div className="text-gray-400 font-bold uppercase tracking-wider pb-1.5 border-b border-gray-800">
+        {label}
       </div>
-      {data?.drift_detected && (
-        <div className="flex items-center gap-1.5 text-rose-400 text-xs font-bold pt-1 border-t border-gray-800">
+      <div className="space-y-2">
+        <div className="flex justify-between items-center gap-4">
+          <span className="text-gray-400 font-medium flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#3b82f6]" />
+            Composite Score
+          </span>
+          <span className="text-white font-extrabold font-mono">
+            {data.composite_score !== undefined && typeof data.composite_score === "number" ? data.composite_score.toFixed(2) : "N/A"}
+          </span>
+        </div>
+        <div className="flex justify-between items-center gap-4">
+          <span className="text-gray-400 font-medium flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#10b981]" />
+            Faithfulness
+          </span>
+          <span className="text-white font-extrabold font-mono">
+            {data.faithfulness_score !== undefined && typeof data.faithfulness_score === "number" ? data.faithfulness_score.toFixed(1) : "N/A"}%
+          </span>
+        </div>
+        <div className="flex justify-between items-center gap-4">
+          <span className="text-gray-400 font-medium flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#f59e0b]" />
+            Context Precision
+          </span>
+          <span className="text-white font-extrabold font-mono">
+            {data.context_precision !== undefined && typeof data.context_precision === "number" ? data.context_precision.toFixed(1) : "N/A"}%
+          </span>
+        </div>
+        <div className="flex justify-between items-center gap-4">
+          <span className="text-gray-400 font-medium flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#06b6d4]" />
+            Context Recall
+          </span>
+          <span className="text-white font-extrabold font-mono">
+            {data.context_recall !== undefined && typeof data.context_recall === "number" ? data.context_recall.toFixed(1) : "N/A"}%
+          </span>
+        </div>
+      </div>
+      {data.drift_detected && (
+        <div className="flex items-center gap-1.5 text-danger font-bold pt-2 border-t border-gray-800">
           <span>⚠️</span>
           <span>Drift Detected</span>
         </div>
@@ -130,7 +193,8 @@ export default function EvolutionGraph({ data, agentName }: EvolutionGraphProps)
 
     return {
       ...run,
-      displayDate: new Date(run.run_date).toLocaleDateString(undefined, {
+      displayDate: parseUTCDate(run.run_date).toLocaleDateString('en-US', {
+        timeZone: 'Asia/Kolkata',
         month: "short",
         day: "numeric",
       }),
@@ -157,7 +221,7 @@ export default function EvolutionGraph({ data, agentName }: EvolutionGraphProps)
   }
 
   return (
-    <div className="w-full bg-gray-950/40 border border-gray-800 p-6 rounded-xl space-y-5">
+    <div className="w-full bg-card border border-gray-800/60 p-6 rounded-xl space-y-5 shadow-lg shadow-black/40">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h3 className="text-md font-bold text-gray-200 flex items-center gap-2">
@@ -192,7 +256,7 @@ export default function EvolutionGraph({ data, agentName }: EvolutionGraphProps)
       <div className="w-full h-72 sm:h-80">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={formattedData} margin={{ top: 10, right: 20, left: -15, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis
               dataKey="displayDate"
               stroke="#6b7280"
@@ -233,14 +297,14 @@ export default function EvolutionGraph({ data, agentName }: EvolutionGraphProps)
               name={activeMetricConfig.label}
               stroke={activeMetricConfig.color}
               strokeWidth={3}
-              dot={(dotProps: any) => (
+              dot={(dotProps: CustomDotProps) => (
                 <CustomDot
                   key={`dot-${dotProps.index}`}
                   {...dotProps}
                   activeMetricColor={activeMetricConfig.color}
                 />
               )}
-              activeDot={(dotProps: any) => (
+              activeDot={(dotProps: CustomDotProps) => (
                 <CustomActiveDot
                   key={`activedot-${dotProps.index}`}
                   {...dotProps}

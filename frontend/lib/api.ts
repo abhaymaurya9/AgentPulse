@@ -45,3 +45,29 @@ export const queryAgent = async (id: string, question: string) => {
   const response = await api.post(`/agents/${id}/query`, { question });
   return response.data;
 };
+
+export const getDriftHistory = async (agentId: string) => {
+  const response = await api.get(`/agents/${agentId}/drift-history`);
+  return response.data;
+};
+
+export const generateBenchmarks = async (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await api.post("/benchmarks/generate", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+};
+
+export const getBenchmarks = async () => {
+  const response = await api.get("/benchmarks");
+  return response.data;
+};
+
+export const deleteBenchmark = async (id: string) => {
+  const response = await api.delete(`/benchmarks/${id}`);
+  return response.data;
+};

@@ -1,5 +1,14 @@
-.env
-.env.local
+.env*
+!.env.example
+
+# Databases & Caches
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Personal Scratch Fact
+agents/autonomous_rag/abhay_secret_fact.txt
 
 # Python
 __pycache__/

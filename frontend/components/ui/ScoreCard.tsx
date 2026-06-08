@@ -5,91 +5,170 @@ type ScoreCardProps = {
   title: string;
   value: string | number;
   description?: string;
-  color?: "indigo" | "emerald" | "amber" | "rose" | "cyan";
+  color?: "primary" | "success" | "warning" | "danger" | "indigo" | "emerald" | "amber" | "rose" | "cyan";
   icon?: ReactNode;
   progress?: number;
+  onClick?: () => void;
+  isLarge?: boolean;
 };
 
-export default function ScoreCard({ title, value, description, color = "indigo", icon, progress }: ScoreCardProps) {
+export default function ScoreCard({
+  title,
+  value,
+  description,
+  color = "primary",
+  icon,
+  progress,
+  onClick,
+  isLarge = false,
+}: ScoreCardProps) {
   const colorMap = {
+    primary: {
+      text: "text-primary",
+      bg: "bg-primary/10",
+      border: "border-primary/20",
+      glow: "group-hover:border-primary/40",
+      bar: "bg-primary",
+      shadow: "hover:shadow-primary/5",
+    },
+    success: {
+      text: "text-success",
+      bg: "bg-success/10",
+      border: "border-success/20",
+      glow: "group-hover:border-success/40",
+      bar: "bg-success",
+      shadow: "hover:shadow-success/5",
+    },
+    warning: {
+      text: "text-warning",
+      bg: "bg-warning/10",
+      border: "border-warning/20",
+      glow: "group-hover:border-warning/40",
+      bar: "bg-warning",
+      shadow: "hover:shadow-warning/5",
+    },
+    danger: {
+      text: "text-danger",
+      bg: "bg-danger/10",
+      border: "border-danger/20",
+      glow: "group-hover:border-danger/40",
+      bar: "bg-danger",
+      shadow: "hover:shadow-danger/5",
+    },
+    // Legacies mapped for safety
     indigo: {
-      text: "text-indigo-400",
-      bg: "bg-indigo-500/10",
-      border: "border-indigo-500/20",
-      glow: "group-hover:border-indigo-500/50",
+      text: "text-primary",
+      bg: "bg-primary/10",
+      border: "border-primary/20",
+      glow: "group-hover:border-primary/40",
+      bar: "bg-primary",
+      shadow: "hover:shadow-primary/5",
     },
     emerald: {
-      text: "text-emerald-400",
-      bg: "bg-emerald-500/10",
-      border: "border-emerald-500/20",
-      glow: "group-hover:border-emerald-500/50",
+      text: "text-success",
+      bg: "bg-success/10",
+      border: "border-success/20",
+      glow: "group-hover:border-success/40",
+      bar: "bg-success",
+      shadow: "hover:shadow-success/5",
     },
     amber: {
-      text: "text-amber-400",
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
-      glow: "group-hover:border-amber-500/50",
+      text: "text-warning",
+      bg: "bg-warning/10",
+      border: "border-warning/20",
+      glow: "group-hover:border-warning/40",
+      bar: "bg-warning",
+      shadow: "hover:shadow-warning/5",
     },
     rose: {
-      text: "text-rose-400",
-      bg: "bg-rose-500/10",
-      border: "border-rose-500/20",
-      glow: "group-hover:border-rose-500/50",
+      text: "text-danger",
+      bg: "bg-danger/10",
+      border: "border-danger/20",
+      glow: "group-hover:border-danger/40",
+      bar: "bg-danger",
+      shadow: "hover:shadow-danger/5",
     },
     cyan: {
-      text: "text-cyan-400",
-      bg: "bg-cyan-500/10",
-      border: "border-cyan-500/20",
-      glow: "group-hover:border-cyan-500/50",
+      text: "text-primary",
+      bg: "bg-primary/10",
+      border: "border-primary/20",
+      glow: "group-hover:border-primary/40",
+      bar: "bg-primary",
+      shadow: "hover:shadow-primary/5",
     },
   };
 
-  const currentColors = colorMap[color];
+  const currentColors = colorMap[color] || colorMap.primary;
 
   return (
-    <div className={clsx(
-      "group relative overflow-hidden rounded-xl border p-6 bg-gray-900/40 backdrop-blur-sm transition-all duration-300 flex flex-col justify-between h-full",
-      currentColors.border,
-      currentColors.glow
-    )}>
+    <div
+      onClick={onClick}
+      className={clsx(
+        "group relative overflow-hidden rounded-xl border bg-card/40 backdrop-blur-md transition-all duration-300 flex flex-col justify-between shadow-md shadow-black/40",
+        isLarge ? "p-8 min-h-[200px]" : "p-6 min-h-[140px]",
+        onClick ? "cursor-pointer hover:scale-[1.03] hover:bg-card/60 active:scale-[0.99]" : "hover:scale-[1.01] hover:bg-card/50",
+        currentColors.border,
+        currentColors.glow,
+        currentColors.shadow
+      )}
+    >
       {/* Decorative Gradient Glow */}
-      <div className={clsx(
-        "absolute -right-16 -top-16 h-32 w-32 rounded-full blur-3xl opacity-20 transition-opacity duration-300 group-hover:opacity-30",
-        currentColors.bg
-      )} />
+      <div
+        className={clsx(
+          "absolute -right-16 -top-16 rounded-full blur-3xl opacity-20 transition-opacity duration-500 group-hover:opacity-30 pointer-events-none",
+          isLarge ? "h-48 w-48" : "h-32 w-32",
+          currentColors.bg
+        )}
+      />
 
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold tracking-wide text-gray-400 uppercase flex items-center gap-2">
-          {icon && <span className={clsx(currentColors.text)}>{icon}</span>}
+      <div className="space-y-3">
+        {/* Metric Name */}
+        <h3
+          className={clsx(
+            "font-semibold tracking-wider text-gray-400 uppercase flex items-center gap-2",
+            isLarge ? "text-sm" : "text-[11px]"
+          )}
+        >
+          {icon && <span className={currentColors.text}>{icon}</span>}
           {title}
         </h3>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className={clsx("text-4xl font-extrabold tracking-tight", currentColors.text)}>
+
+        {/* Score Number (Big, center) */}
+        <div className={clsx("flex items-baseline gap-1.5", isLarge ? "mt-4" : "mt-2")}>
+          <span
+            className={clsx(
+              "font-black tracking-tight",
+              isLarge ? "text-5xl md:text-6xl text-white" : "text-3xl md:text-4xl",
+              !isLarge && currentColors.text
+            )}
+          >
             {value}
           </span>
+          {isLarge && typeof value === "string" && !isNaN(Number(value)) && (
+            <span className="text-gray-400 text-lg md:text-xl font-medium">/100</span>
+          )}
+          {isLarge && typeof value === "number" && (
+            <span className="text-gray-400 text-lg md:text-xl font-medium">/100</span>
+          )}
         </div>
+
         {description && (
-          <p className="mt-2 text-xs text-gray-500 line-clamp-2">
+          <p className={clsx("text-gray-400 leading-relaxed", isLarge ? "text-xs mt-3 max-w-xl" : "text-[11px] mt-1.5 line-clamp-2")}>
             {description}
           </p>
         )}
       </div>
 
+      {/* Progress Bar (Bottom) */}
       {progress !== undefined && (
-        <div className="mt-5 space-y-2 pt-2 border-t border-gray-800/40">
+        <div className={clsx("space-y-1.5 pt-3 border-t border-gray-800/60", isLarge ? "mt-8" : "mt-5")}>
           <div className="flex justify-between text-[10px] font-mono text-gray-500">
-            <span>Progress</span>
-            <span>{Math.round(progress)}%</span>
+            <span>Score weight</span>
+            <span className={clsx("font-bold", currentColors.text)}>{Math.round(progress)}%</span>
           </div>
-          <div className="w-full bg-gray-950 h-1.5 rounded-full overflow-hidden border border-gray-850">
+          <div className="w-full bg-gray-950 h-2 rounded-full overflow-hidden border border-gray-800/40">
             <div
-              className={clsx("h-full rounded-full transition-all duration-500 ease-out", {
-                "bg-indigo-500": color === "indigo",
-                "bg-emerald-500": color === "emerald",
-                "bg-amber-500": color === "amber",
-                "bg-rose-500": color === "rose",
-                "bg-cyan-500": color === "cyan",
-              })}
+              className={clsx("h-full rounded-full transition-all duration-700 ease-out", currentColors.bar)}
               style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
             />
           </div>

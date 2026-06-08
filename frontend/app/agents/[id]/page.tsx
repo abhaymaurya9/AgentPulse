@@ -3,12 +3,17 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getAgent, getAgentRuns, triggerEvaluation, queryAgent } from "@/lib/api";
+import { getAgent, getAgentRuns, triggerEvaluation, queryAgent, getDriftHistory } from "@/lib/api";
 import ScoreCard from "@/components/ui/ScoreCard";
 import DriftBadge from "@/components/ui/DriftBadge";
 import EvolutionGraph from "@/components/charts/EvolutionGraph";
-import { Cpu, ExternalLink, Play, ArrowLeft, BarChart2, Calendar, CheckCircle2 } from "lucide-react";
+import { Cpu, ExternalLink, Play, ArrowLeft, BarChart2, Calendar, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import clsx from "clsx";
+
+function parseUTCDate(dateStr: string | undefined | null): Date {
+  if (!dateStr) return new Date();
+  return new Date(dateStr.endsWith("Z") ? dateStr : dateStr + "Z");
+}
 
 type Agent = {
   id: string;
@@ -31,6 +36,16 @@ type Run = {
   answer_quality: number;
   composite_score: number;
   drift_detected: boolean;
+  drift_reason?: string;
+  version?: string;
+};
+
+type DriftHistoryEvent = {
+  run_id: string;
+  run_date: string;
+  composite_score: number;
+  drift_reason: string;
+  score_drop_percentage: number;
 };
 
 export default function AgentDetailPage() {
@@ -39,6 +54,7 @@ export default function AgentDetailPage() {
 
   const [agent, setAgent] = useState<Agent | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
+  const [driftHistory, setDriftHistory] = useState<DriftHistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [evaluating, setEvaluating] = useState(false);
   const [evalSuccess, setEvalSuccess] = useState(false);
@@ -46,6 +62,7 @@ export default function AgentDetailPage() {
   const [customQuestion, setCustomQuestion] = useState("");
   const [queryResponse, setQueryResponse] = useState<{ answer: string; latency_ms: number; token_count?: number } | null>(null);
   const [querying, setQuerying] = useState(false);
+  const [queryError, setQueryError] = useState<string | null>(null);
 
   // References to keep track of polling to clean up on unmount
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -56,11 +73,15 @@ export default function AgentDetailPage() {
     try {
       setQuerying(true);
       setQueryResponse(null);
+      setQueryError(null);
       const res = await queryAgent(id, customQuestion);
       setQueryResponse(res);
+      // Fetch latest runs so the playground query run appears immediately!
+      await fetchAgentData(false);
     } catch (err) {
-      console.error(err);
-      alert("Failed to query the agent.");
+      const apiError = err as { message?: string; response?: { data?: { detail?: string } } };
+      console.warn("Failed to query agent:", apiError.message || apiError);
+      setQueryError(apiError.response?.data?.detail || "Failed to query the agent. Please check connection and try again.");
     } finally {
       setQuerying(false);
     }
@@ -72,10 +93,21 @@ export default function AgentDetailPage() {
       if (showLoading) setLoading(true);
       const agentDetails = await getAgent(id);
       const runsDetails = await getAgentRuns(id);
+      const sortedRuns = [...runsDetails].sort((a, b) => parseUTCDate(b.run_date).getTime() - parseUTCDate(a.run_date).getTime());
       setAgent(agentDetails);
-      setRuns(runsDetails);
+      setRuns(sortedRuns);
+
+      // Fetch Drift History
+      try {
+        const driftHistoryDetails = await getDriftHistory(id);
+        setDriftHistory(driftHistoryDetails);
+      } catch (err) {
+        const error = err as Error;
+        console.warn("Error fetching drift history:", error.message || error);
+      }
     } catch (err) {
-      console.error("Error fetching agent details:", err);
+      const error = err as Error;
+      console.warn("Error fetching agent details:", error.message || error);
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -86,6 +118,7 @@ export default function AgentDetailPage() {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleEvaluate = async () => {
@@ -105,8 +138,14 @@ export default function AgentDetailPage() {
           const updatedRuns = await getAgentRuns(id);
           if (updatedRuns.length > initialRunsLength || attempts >= 20) {
             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-            setRuns(updatedRuns);
+            
+            // Fetch newest data
+            const driftHistoryDetails = await getDriftHistory(id);
+            setDriftHistory(driftHistoryDetails);
+            const sortedUpdatedRuns = [...updatedRuns].sort((a, b) => parseUTCDate(b.run_date).getTime() - parseUTCDate(a.run_date).getTime());
+            setRuns(sortedUpdatedRuns);
             setEvaluating(false);
+
             if (updatedRuns.length > initialRunsLength) {
               setEvalSuccess(true);
               // Hide success message after 5 seconds
@@ -116,12 +155,14 @@ export default function AgentDetailPage() {
             }
           }
         } catch (err) {
-          console.error("Error polling evaluation runs:", err);
+          const error = err as Error;
+          console.warn("Error polling evaluation runs:", error.message || error);
         }
       }, 3000);
 
     } catch (err) {
-      console.error(err);
+      const error = err as Error;
+      console.warn("Failed to trigger evaluation run:", error.message || error);
       alert("Failed to trigger evaluation run.");
       setEvaluating(false);
     }
@@ -189,11 +230,20 @@ export default function AgentDetailPage() {
 
   const latestRun = runs[0];
 
+  // Calculate latest drop percentage relative to rolling average of preceding up to 3 runs
+  const precedingRuns = runs.slice(1, 4);
+  const avgPreceding = precedingRuns.length > 0
+    ? precedingRuns.reduce((sum, r) => sum + r.composite_score, 0) / precedingRuns.length
+    : 0;
+  const latestDropPct = avgPreceding > 0
+    ? Math.max(0, ((avgPreceding - (latestRun?.composite_score || 0)) / avgPreceding) * 100)
+    : 0;
+
   // Helper functions for dynamic metric card styling based on 0-100 threshold guidelines
   const getScoreColor = (score: number) => {
-    if (score > 70) return "emerald";
-    if (score >= 40) return "amber";
-    return "rose";
+    if (score > 70) return "success";
+    if (score >= 40) return "warning";
+    return "danger";
   };
 
   const getLatencyScore = (latencyMs: number) => {
@@ -202,9 +252,9 @@ export default function AgentDetailPage() {
   };
 
   const getLatencyColor = (latencyMs: number) => {
-    if (latencyMs < 2000) return "emerald";
-    if (latencyMs < 5000) return "amber";
-    return "rose";
+    if (latencyMs < 2000) return "success";
+    if (latencyMs < 5000) return "warning";
+    return "danger";
   };
 
   // Evolution Stats aggregation calculations
@@ -223,11 +273,41 @@ export default function AgentDetailPage() {
         </Link>
       </div>
 
+      {/* 1.4 Drift Alert Banner */}
+      {latestRun && (
+        latestRun.drift_detected ? (
+          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-5 py-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm shadow-lg shadow-rose-500/5 animate-pulse">
+            <div className="flex items-start gap-3">
+              <span className="text-xl mt-0.5">⚠️</span>
+              <div>
+                <h4 className="font-extrabold text-white">Drift Detected in Latest Run</h4>
+                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                  Reason: <strong className="text-rose-300">{latestRun.drift_reason || "General performance drop"}</strong> 
+                  <span className="mx-2 text-gray-700">|</span> 
+                  Score Drop: <strong className="text-rose-300">{latestDropPct.toFixed(1)}%</strong>
+                </p>
+              </div>
+            </div>
+            <Link
+              href={`/agents/${id}/runs/${latestRun.id}`}
+              className="inline-flex items-center justify-center rounded-lg bg-danger hover:bg-danger/90 text-white text-xs font-bold px-4 py-2.5 shadow-md transition-all duration-200 shrink-0 cursor-pointer"
+            >
+              View Run
+            </Link>
+          </div>
+        ) : (
+          <div className="bg-success/10 border border-success/20 text-success px-5 py-3.5 rounded-xl flex items-center gap-2.5 text-sm shadow-md">
+            <span className="text-lg">✅</span>
+            <span className="font-semibold text-white">Agent performing normally</span>
+          </div>
+        )
+      )}
+
       {/* Success alert banner */}
       {evalSuccess && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3.5 rounded-xl flex items-center justify-between text-sm shadow-lg shadow-emerald-500/5 animate-fade-in">
+        <div className="bg-success/10 border border-success/20 text-success px-4 py-3.5 rounded-xl flex items-center justify-between text-sm shadow-lg shadow-success/5 animate-fade-in">
           <div className="flex items-center gap-2 font-semibold">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            <CheckCircle2 className="h-5 w-5 text-success" />
             <span>Evaluation Complete! The latest metrics have been updated.</span>
           </div>
           <button onClick={() => setEvalSuccess(false)} className="hover:text-white transition text-xs font-bold px-1.5 py-0.5 rounded hover:bg-gray-800">
@@ -240,14 +320,14 @@ export default function AgentDetailPage() {
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-gray-900 pb-6">
         <div className="space-y-3.5">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/15">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/15">
               <Cpu className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-3xl font-extrabold text-white flex items-center gap-2">
                 {agent.name}
               </h1>
-              <p className="text-sm font-mono text-indigo-400 mt-0.5">{agent.model_name}</p>
+              <p className="text-sm font-mono text-primary mt-0.5">{agent.model_name}</p>
             </div>
           </div>
           <p className="text-sm text-gray-400 max-w-3xl leading-relaxed">{agent.description}</p>
@@ -255,7 +335,7 @@ export default function AgentDetailPage() {
             <div className="flex items-center gap-1">
               <ExternalLink className="h-3.5 w-3.5" />
               <span>Endpoint:</span>
-              <a href={agent.endpoint_url} target="_blank" rel="noopener noreferrer" className="hover:underline text-indigo-400">
+              <a href={agent.endpoint_url} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary animate-pulse">
                 {agent.endpoint_url}
               </a>
             </div>
@@ -264,7 +344,7 @@ export default function AgentDetailPage() {
               <span>Registered:</span>
               <span className="text-gray-400">
                 {agent.created_at
-                  ? new Date(agent.created_at).toLocaleDateString(undefined, {
+                  ? parseUTCDate(agent.created_at).toLocaleDateString(undefined, {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
@@ -281,14 +361,18 @@ export default function AgentDetailPage() {
             onClick={handleEvaluate}
             disabled={evaluating}
             className={clsx(
-              "w-full cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition shadow-md disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed",
+              "w-full cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 shadow-md disabled:bg-gray-850 disabled:text-gray-500 disabled:cursor-not-allowed",
               evaluating 
-                ? "bg-gray-800"
-                : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/10"
+                ? "bg-gray-855"
+                : "bg-primary hover:bg-primary/90 shadow-primary/15"
             )}
           >
-            <Play className={clsx("h-4 w-4", evaluating && "animate-pulse")} />
-            {evaluating ? "Running..." : "Run Evaluation"}
+            {evaluating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+            {evaluating ? "Evaluating..." : "Run Evaluation"}
           </button>
         </div>
       </div>
@@ -301,14 +385,15 @@ export default function AgentDetailPage() {
         </h2>
         {latestRun ? (
           /* Grid puzzle layout: Composite Score spans 2 columns & 2 rows */
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 md:row-span-2 h-full">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            <div className="col-span-2 md:col-span-2 md:row-span-2 h-full">
               <ScoreCard 
                 title="Composite Score" 
                 value={latestRun.composite_score.toFixed(2)} 
                 description="Aggregated master index weighted on factual accuracy, latency responsiveness, and prompt cost efficiency metrics." 
                 color={getScoreColor(latestRun.composite_score)}
                 progress={latestRun.composite_score}
+                isLarge={true}
               />
             </div>
             <ScoreCard 
@@ -348,8 +433,26 @@ export default function AgentDetailPage() {
             />
           </div>
         ) : (
-          <div className="border border-dashed border-gray-800 rounded-xl p-10 text-center text-gray-500">
-            No metrics available yet. Execute "Run Evaluation" to generate.
+          <div className="border border-dashed border-gray-800 rounded-xl p-12 text-center space-y-4 bg-card/10">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/20">
+              <BarChart2 className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-bold text-white">No Evaluation Runs Yet</h3>
+            <p className="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed">
+              This agent hasn&apos;t been evaluated. Trigger a run to compile correctness, relevance, and latency metrics.
+            </p>
+            <button
+              onClick={handleEvaluate}
+              disabled={evaluating}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 shadow-md shadow-primary/10 cursor-pointer disabled:bg-gray-850 disabled:cursor-not-allowed"
+            >
+              {evaluating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              {evaluating ? "Evaluating..." : "Run First Evaluation"}
+            </button>
           </div>
         )}
       </div>
@@ -383,6 +486,58 @@ export default function AgentDetailPage() {
         </div>
       )}
 
+      {/* 1.5 Drift History Timeline Section */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-gray-200 flex items-center gap-2">
+          <span className="text-xl">⚠️</span>
+          Drift History
+        </h2>
+        {driftHistory.length === 0 ? (
+          <div className="flex items-center gap-2.5 p-5 border border-dashed border-gray-800 rounded-xl bg-gray-950/10 text-gray-400 text-sm">
+            <span className="text-emerald-400 text-base">✅</span>
+            <span>No drift events detected for this agent.</span>
+          </div>
+        ) : (
+          <div className="relative border-l border-gray-850 pl-6 ml-3 space-y-6 pt-2 pb-2">
+            {driftHistory.map((event) => (
+              <div key={event.run_id} className="relative space-y-2">
+                {/* Node bullet */}
+                <div className="absolute -left-[30px] top-1.5 h-2 w-2 rounded-full bg-rose-500 border border-rose-800" />
+                
+                <div className="flex items-start sm:items-center justify-between gap-4 flex-col sm:flex-row">
+                  <div>
+                    <span className="text-[10px] font-mono text-gray-500">
+                      {parseUTCDate(event.run_date).toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata',
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    <h4 className="text-sm font-semibold text-gray-200 mt-0.5 flex flex-wrap items-center gap-2.5">
+                      Composite Score: <strong className="text-indigo-400 font-extrabold">{event.composite_score.toFixed(2)}</strong>
+                      <span className="text-rose-400 text-xs px-2 py-0.5 bg-rose-500/5 border border-rose-500/10 rounded-md">
+                        -{event.score_drop_percentage.toFixed(1)}% drop
+                      </span>
+                    </h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Reason: <strong className="text-rose-300/90 font-medium">{event.drift_reason}</strong>
+                    </p>
+                  </div>
+                  <Link
+                    href={`/agents/${id}/runs/${event.run_id}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-800 hover:border-gray-700 bg-gray-900/20 px-3.5 py-1.5 text-xs font-semibold text-gray-400 hover:text-white transition"
+                  >
+                    View Replay
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Interactive Playground Section */}
       <div className="border border-gray-800 bg-gray-950/20 p-6 rounded-xl space-y-4">
         <div>
@@ -393,9 +548,16 @@ export default function AgentDetailPage() {
             Agent Playground
           </h2>
           <p className="text-xs text-gray-400 mt-1">
-            Test this RAG agent's response and latency with custom questions directly from the UI.
+            Test this RAG agent&apos;s response and latency with custom questions directly from the UI.
           </p>
         </div>
+
+        {queryError && (
+          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <div className="text-sm font-medium">{queryError}</div>
+          </div>
+        )}
 
         <form onSubmit={handleQueryAgent} className="flex gap-3">
           <input
@@ -409,9 +571,16 @@ export default function AgentDetailPage() {
           <button
             type="submit"
             disabled={querying || !customQuestion.trim()}
-            className="cursor-pointer inline-flex items-center justify-center rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-850 px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed"
+            className="cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 disabled:bg-gray-850 px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:cursor-not-allowed"
           >
-            {querying ? "Querying..." : "Send Question"}
+            {querying ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Querying...</span>
+              </>
+            ) : (
+              <span>Send Question</span>
+            )}
           </button>
         </form>
 
@@ -451,10 +620,12 @@ export default function AgentDetailPage() {
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-900/40">
+            <tbody className="divide-y divide-gray-900/60">
               {runs.map((run, idx) => {
                 const isLatest = idx === 0;
                 const isDrift = run.drift_detected;
+                const scoreColorClass = getScoreColor(run.composite_score);
+                const scoreTextClass = scoreColorClass === "success" ? "text-success font-extrabold text-lg" : scoreColorClass === "warning" ? "text-warning font-extrabold text-lg" : "text-danger font-extrabold text-lg";
 
                 return (
                   <tr 
@@ -462,25 +633,28 @@ export default function AgentDetailPage() {
                     className={clsx(
                       "transition duration-150",
                       isDrift 
-                        ? "bg-rose-950/10 hover:bg-rose-950/20 text-rose-200/90" 
+                        ? "bg-danger/5 hover:bg-danger/10 text-rose-200/90" 
                         : isLatest 
-                          ? "bg-indigo-950/10 hover:bg-indigo-950/20 font-semibold text-indigo-200" 
-                          : "hover:bg-gray-900/10 text-gray-300"
+                          ? "bg-primary/5 hover:bg-primary/10 text-primary font-semibold" 
+                          : "hover:bg-card/25 even:bg-card/10 text-gray-300"
                     )}
                   >
                     <td className="p-4 font-mono text-xs">
                       #{runs.length - idx}
                     </td>
                     <td className="p-4 font-medium">
-                      {new Date(run.run_date).toLocaleString(undefined, {
+                      {parseUTCDate(run.run_date).toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata',
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
                     </td>
-                    <td className={clsx("p-4 font-bold", isLatest ? "text-indigo-400" : "text-gray-200")}>
-                      {run.composite_score.toFixed(2)}
+                    <td className="p-4">
+                      <span className={scoreTextClass}>
+                        {run.composite_score.toFixed(2)}
+                      </span>
                     </td>
                     <td className="p-4">
                       {(run.faithfulness_score * 100).toFixed(0)}%
@@ -489,14 +663,24 @@ export default function AgentDetailPage() {
                       {run.latency_ms}ms
                     </td>
                     <td className="p-4">
-                      <span className={clsx(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase border",
-                        isDrift
-                          ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                          : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      )}>
-                        {isDrift ? "Drift" : "No Drift"}
-                      </span>
+                      <div className="group relative inline-block">
+                        <span className={clsx(
+                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase border cursor-help",
+                          isDrift
+                            ? "bg-danger/10 text-danger border-danger/20"
+                            : "bg-success/10 text-success border-success/20"
+                        )}>
+                          {isDrift ? "Drift" : "No Drift"}
+                        </span>
+                        
+                        {/* 1.6 Custom CSS tooltip for drift reason in table */}
+                        {isDrift && (
+                          <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-950 border border-gray-800 text-gray-200 text-[10px] rounded p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-xl z-50 leading-relaxed font-sans font-medium whitespace-normal">
+                            {run.drift_reason || "General performance drop"}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-950" />
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4 text-right">
                       <Link

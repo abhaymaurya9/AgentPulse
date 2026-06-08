@@ -35,7 +35,8 @@ export default function RegisterAgentPage() {
         router.push("/dashboard");
       }
     } catch (err) {
-      console.error(err);
+      const error = err as Error;
+      console.warn("Failed to register agent:", error.message || error);
       alert("Failed to register agent");
     } finally {
       setSubmitting(false);

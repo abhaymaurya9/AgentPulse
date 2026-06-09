@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { registerAgent } from "../../lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -27,22 +28,13 @@ export default function RegisterPage() {
         alert("Please fill all fields");
         return;
     }
-    const response = await fetch(
-      "http://127.0.0.1:8000/agents",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      }
-    );
-
-    if (response.ok) {
+    
+    try {
+      await registerAgent(form);
       alert("Agent Registered!");
-
       router.push("/");
-    } else {
+    } catch (error) {
+      console.error("Failed to register agent:", error);
       alert("Failed to register agent");
     }
   };

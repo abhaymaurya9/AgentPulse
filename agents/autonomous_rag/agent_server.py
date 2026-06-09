@@ -81,10 +81,10 @@ async def run_agent(body: QuestionRequest):
     
     answer = ""
     if response is not None:
-        if hasattr(response, "content") and response.content is not None:
+        if hasattr(response, "content") and response.content:
             answer = response.content
-        else:
-            answer = str(response)
+        elif hasattr(response, "reasoning_content") and response.reasoning_content:
+            answer = response.reasoning_content
         
     if answer is None:
         answer = ""

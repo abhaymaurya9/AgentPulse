@@ -7,7 +7,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, WebBaseLoader
 from langchain_community.tools import TavilySearchResults
 from langchain_community.vectorstores import Qdrant
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_core.messages import HumanMessage        
 from langgraph.graph import END, StateGraph
 from typing import Dict, TypedDict
@@ -29,9 +29,7 @@ load_dotenv()
 nest_asyncio.apply()
 
 # Initialize embeddings
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+embeddings = FastEmbedEmbeddings()
 
 # Global retriever reference
 retriever = None

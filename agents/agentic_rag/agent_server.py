@@ -48,7 +48,7 @@ agent = Agent(
     ),
     knowledge=knowledge,
     search_knowledge=True,
-    tools=[DuckDuckGoTools()],
+    tools=[ReasoningTools(add_instructions=True), DuckDuckGoTools()],
     instructions=[
         "Search your knowledge base first.",
         "If the knowledge base does not contain the answer, search the internet using DuckDuckGo.",
@@ -78,12 +78,10 @@ async def run_agent(body: QuestionRequest):
     answer = ""
 
     if response is not None:
-        if hasattr(response, "content") and response.content:
+        if hasattr(response, "content") and response.content is not None:
             answer = response.content
-        elif hasattr(response, "reasoning_content") and response.reasoning_content:
-            reasoning = response.reasoning_content.strip()
-            if "Need web search" not in reasoning and "irrelevant data" not in reasoning:
-                answer = reasoning
+        else:
+            answer = str(response)
 
     if answer is None:
         answer = ""

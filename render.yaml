@@ -1,0 +1,54 @@
+services:
+  # 1. Backend Service
+  - type: web
+    name: agentpulse-backend
+    plan: free
+    env: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: SUPABASE_URL
+        sync: true
+      - key: SUPABASE_KEY
+        sync: true
+      - key: GROQ_API_KEY
+        sync: true
+      - key: RUNNING_IN_DOCKER
+        value: "false"
+
+  # 2. Agentic RAG Service
+  - type: web
+    name: agentpulse-agentic-rag
+    plan: free
+    env: docker
+    dockerContext: ./agents/agentic_rag
+    dockerfilePath: ./agents/agentic_rag/Dockerfile
+    envVars:
+      - key: GROQ_API_KEY
+        sync: true
+
+  # 3. Autonomous RAG Service
+  - type: web
+    name: agentpulse-autonomous-rag
+    plan: free
+    env: docker
+    dockerContext: ./agents/autonomous_rag
+    dockerfilePath: ./agents/autonomous_rag/Dockerfile
+    envVars:
+      - key: GROQ_API_KEY
+        sync: true
+      - key: SUPABASE_DB_URL
+        sync: true
+
+  # 4. Corrective RAG Service
+  - type: web
+    name: agentpulse-corrective-rag
+    plan: free
+    env: docker
+    dockerContext: ./agents/corrective_rag
+    dockerfilePath: ./agents/corrective_rag/Dockerfile
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: true
+      - key: TAVILY_API_KEY
+        sync: true

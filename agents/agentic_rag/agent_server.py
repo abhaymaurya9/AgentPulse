@@ -48,7 +48,7 @@ agent = Agent(
     ),
     knowledge=knowledge,
     search_knowledge=True,
-    tools=[ReasoningTools(add_instructions=True), DuckDuckGoTools()],
+    tools=[DuckDuckGoTools()],
     instructions=[
         "Search your knowledge base first.",
         "If the knowledge base does not contain the answer, search the internet using DuckDuckGo.",

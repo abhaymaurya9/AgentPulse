@@ -81,7 +81,9 @@ async def run_agent(body: QuestionRequest):
         if hasattr(response, "content") and response.content:
             answer = response.content
         elif hasattr(response, "reasoning_content") and response.reasoning_content:
-            answer = response.reasoning_content
+            reasoning = response.reasoning_content.strip()
+            if "Need web search" not in reasoning and "irrelevant data" not in reasoning:
+                answer = reasoning
 
     if answer is None:
         answer = ""

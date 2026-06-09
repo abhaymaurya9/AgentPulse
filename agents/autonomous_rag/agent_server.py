@@ -21,6 +21,7 @@ app = FastAPI(title="Autonomous RAG Agent Server")
 
 class QuestionRequest(BaseModel):
     question: str
+    session_id: str = None
 
 
 class IngestRequest(BaseModel):
@@ -125,8 +126,94 @@ def health():
 @app.post("/run")
 async def run_agent(body: QuestionRequest):
     start = time.time()
-    
-    response = agent.run(body.question)
+
+    # 1. Initialize persistent session if session_id is a run_id and is new
+    if body.session_id:
+        try:
+            # Check if table exists, create it
+            agent.db._create_all_tables()
+            
+            with engine.connect() as conn:
+                # Check if session exists in DB
+                from sqlalchemy import text as sql_text
+                exists = conn.execute(sql_text(
+                    "SELECT COUNT(*) FROM ai.auto_rag_storage WHERE session_id = :sid"
+                ), {"sid": body.session_id}).scalar() > 0
+                
+                if not exists:
+                    # Check if session_id is a valid evaluation run in eval_runs or run_traces
+                    traces = conn.execute(sql_text(
+                        "SELECT step_input, step_output FROM run_traces WHERE eval_run_id = :sid ORDER BY step_number ASC"
+                    ), {"sid": body.session_id}).mappings().all()
+                    
+                    if traces:
+                        # Construct runs list matching Agno's database schema
+                        import json, uuid
+                        run_list = []
+                        current_time = int(time.time())
+                        for i, r in enumerate(traces):
+                            user_msg_id = str(uuid.uuid4())
+                            assistant_msg_id = str(uuid.uuid4())
+                            run_id = str(uuid.uuid4())
+                            
+                            run_list.append({
+                                "input": {"input_content": r["step_input"]},
+                                "model": "openai/gpt-oss-120b:free",
+                                "tools": [],
+                                "run_id": run_id,
+                                "status": "COMPLETED",
+                                "content": r["step_output"],
+                                "agent_id": "auto_rag_agent_server",
+                                "messages": [
+                                    {
+                                        "id": user_msg_id,
+                                        "role": "user",
+                                        "content": r["step_input"],
+                                        "created_at": current_time + i,
+                                        "from_history": True,
+                                        "stop_after_tool_call": False
+                                    },
+                                    {
+                                        "id": assistant_msg_id,
+                                        "role": "assistant",
+                                        "content": r["step_output"],
+                                        "created_at": current_time + i,
+                                        "from_history": True,
+                                        "stop_after_tool_call": False
+                                    }
+                                ],
+                                "created_at": current_time + i,
+                                "session_id": body.session_id,
+                                "content_type": "str",
+                                "session_state": {},
+                                "model_provider": "OpenAI"
+                            })
+                            
+                        # Insert into auto_rag_storage
+                        conn.execute(sql_text(
+                            "INSERT INTO ai.auto_rag_storage (session_id, session_type, agent_id, runs, created_at, updated_at) "
+                            "VALUES (:sid, 'agent', 'auto_rag_agent_server', :runs, :created_at, :updated_at) "
+                            "ON CONFLICT (session_id) DO NOTHING"
+                        ), {
+                            "sid": body.session_id,
+                            "runs": json.dumps(run_list),
+                            "created_at": current_time,
+                            "updated_at": current_time
+                        })
+                        conn.commit()
+                        print(f"Successfully pre-seeded session history from run traces for session_id: {body.session_id}")
+        except Exception as seed_err:
+            print(f"Warning: Failed to seed chat history from evaluation run context: {seed_err}")
+
+    # Set parameters for loading/storing history on the agent dynamically
+    if body.session_id:
+        agent.store_history_messages = True
+        agent.read_chat_history = True
+    else:
+        agent.store_history_messages = False
+        agent.read_chat_history = False
+
+    response = agent.run(body.question, session_id=body.session_id)
     
     answer = ""
     if response is not None:

@@ -41,8 +41,8 @@ export const registerAgent = async (agentData: {
   return response.data;
 };
 
-export const queryAgent = async (id: string, question: string) => {
-  const response = await api.post(`/agents/${id}/query`, { question });
+export const queryAgent = async (id: string, question: string, sessionId?: string) => {
+  const response = await api.post(`/agents/${id}/query`, { question, session_id: sessionId });
   return response.data;
 };
 

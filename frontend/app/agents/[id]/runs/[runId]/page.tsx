@@ -7,7 +7,7 @@ import { getRun, getAgent, getAgentRuns } from "@/lib/api";
 import ReplayViewer from "@/components/replay/ReplayViewer";
 import ScoreCard from "@/components/ui/ScoreCard";
 import DriftBadge from "@/components/ui/DriftBadge";
-import { ArrowLeft, PlayCircle, Clock } from "lucide-react";
+import { ArrowLeft, PlayCircle, Clock, MessageSquare } from "lucide-react";
 
 function parseUTCDate(dateStr: string | undefined | null): Date {
   if (!dateStr) return new Date();
@@ -212,6 +212,13 @@ export default function RunReplayPage() {
  
         <div className="flex items-center gap-4">
           <DriftBadge driftDetected={run.drift_detected} />
+          <Link
+            href={`/playground?agentId=${agentId}&runId=${runId}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-semibold text-white transition shadow-md shadow-indigo-600/10 cursor-pointer"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Continue Chat
+          </Link>
           <div className="flex flex-col text-right">
             <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Composite Score</span>
             <span className="text-2xl font-extrabold text-indigo-400">{run.composite_score.toFixed(2)}</span>

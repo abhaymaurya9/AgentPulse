@@ -160,10 +160,15 @@ def query_agent(agent_id: str, body: dict):
     if os.getenv("RUNNING_IN_DOCKER") == "true":
         endpoint_url = endpoint_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
     question = body.get("question", "")
+    session_id = body.get("session_id")
     
     try:
         try:
-            res = httpx.post(endpoint_url, json={"question": question}, timeout=120.0)
+            res = httpx.post(
+                endpoint_url,
+                json={"question": question, "session_id": session_id},
+                timeout=120.0
+            )
         except Exception as conn_err:
             raise HTTPException(
                 status_code=502,

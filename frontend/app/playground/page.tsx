@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getAgents, queryAgent } from "@/lib/api";
+import { useEffect, useState, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { getAgents, queryAgent, getRun } from "@/lib/api";
 import { Send, Terminal, Clock, Zap, MessageSquare, AlertCircle, Loader2 } from "lucide-react";
 
 type Agent = {
@@ -12,14 +13,28 @@ type Agent = {
   model_name: string;
 };
 
-export default function PlaygroundPage() {
+type Message = {
+  role: "user" | "agent";
+  content: string;
+  latency_ms?: number;
+  token_count?: number;
+};
+
+function PlaygroundContent() {
+  const searchParams = useSearchParams();
+  const initialAgentId = searchParams.get("agentId");
+  const initialRunId = searchParams.get("runId");
+
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [loadingAgents, setLoadingAgents] = useState(true);
   const [customQuestion, setCustomQuestion] = useState("");
-  const [queryResponse, setQueryResponse] = useState<{ answer: string; latency_ms: number; token_count?: number } | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [sessionId, setSessionId] = useState<string>("");
   const [querying, setQuerying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadAgents() {
@@ -27,8 +42,37 @@ export default function PlaygroundPage() {
         setLoadingAgents(true);
         const data = await getAgents();
         setAgents(data);
-        if (data.length > 0) {
-          setSelectedAgentId(data[0].id);
+        
+        let selectedId = data.length > 0 ? data[0].id : "";
+        if (initialAgentId && data.some((a: Agent) => a.id === initialAgentId)) {
+          selectedId = initialAgentId;
+        }
+        setSelectedAgentId(selectedId);
+
+        // If historical run is provided, seed initial chat with its traces
+        if (initialRunId && selectedId) {
+          setSessionId(initialRunId);
+          try {
+            const runData = await getRun(initialRunId);
+            if (runData && runData.traces) {
+              interface TraceItem {
+                step_number: number;
+                step_input: string;
+                step_output: string;
+              }
+              const sorted = (runData.traces as TraceItem[]).sort((a, b) => a.step_number - b.step_number);
+              const chatHistory = sorted.flatMap((t: TraceItem) => [
+                { role: "user" as const, content: t.step_input },
+                { role: "agent" as const, content: t.step_output }
+              ]);
+              setMessages(chatHistory);
+            }
+          } catch (runErr) {
+            console.warn("Failed to load run traces for playground context:", runErr);
+          }
+        } else {
+          // Generate a fresh session ID
+          setSessionId(Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
         }
       } catch (err) {
         const error = err as Error;
@@ -39,7 +83,12 @@ export default function PlaygroundPage() {
       }
     }
     loadAgents();
-  }, []);
+  }, [initialAgentId, initialRunId]);
+
+  // Smooth scroll to the bottom of the chat list
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
 
@@ -47,12 +96,27 @@ export default function PlaygroundPage() {
     e.preventDefault();
     if (!customQuestion.trim() || !selectedAgentId) return;
 
+    const currentQuestion = customQuestion;
+    setCustomQuestion("");
+
+    // Append user message
+    const userMessage: Message = { role: "user", content: currentQuestion };
+    setMessages((prev) => [...prev, userMessage]);
+
     try {
       setQuerying(true);
       setError(null);
-      setQueryResponse(null);
-      const res = await queryAgent(selectedAgentId, customQuestion);
-      setQueryResponse(res);
+      
+      const res = await queryAgent(selectedAgentId, currentQuestion, sessionId);
+      
+      // Append agent response
+      const agentMessage: Message = {
+        role: "agent",
+        content: res.answer,
+        latency_ms: res.latency_ms,
+        token_count: res.token_count,
+      };
+      setMessages((prev) => [...prev, agentMessage]);
     } catch (err) {
       const apiError = err as { message?: string; response?: { data?: { detail?: string } } };
       console.warn("Failed to query the agent:", apiError.message || apiError);
@@ -104,8 +168,9 @@ export default function PlaygroundPage() {
                 value={selectedAgentId}
                 onChange={(e) => {
                   setSelectedAgentId(e.target.value);
-                  setQueryResponse(null);
+                  setMessages([]);
                   setError(null);
+                  setSessionId(Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
                 }}
                 className="w-full bg-gray-950 border border-gray-850 focus:border-indigo-500/80 rounded-lg p-2.5 text-sm text-white outline-none transition cursor-pointer"
               >
@@ -144,48 +209,74 @@ export default function PlaygroundPage() {
 
         {/* Chat / Console Panel */}
         <div className="md:col-span-2 space-y-6">
-          <div className="border border-gray-800 bg-gray-950/20 p-6 rounded-xl flex flex-col justify-between min-h-[450px]">
+          <div className="border border-gray-800 bg-gray-950/20 p-6 rounded-xl flex flex-col justify-between min-h-[500px]">
             {/* Console Header */}
-            <div className="flex items-center gap-2 border-b border-gray-900 pb-3 mb-4">
-              <MessageSquare className="h-5 w-5 text-indigo-400" />
-              <h2 className="text-md font-bold text-gray-200">
-                {selectedAgent ? `${selectedAgent.name} Terminal` : "Interactive Terminal"}
-              </h2>
+            <div className="flex items-center justify-between border-b border-gray-900 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-indigo-400" />
+                <h2 className="text-md font-bold text-gray-200">
+                  {selectedAgent ? `${selectedAgent.name} Terminal` : "Interactive Terminal"}
+                </h2>
+              </div>
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMessages([]);
+                    setSessionId(Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
+                  }}
+                  className="cursor-pointer text-[10px] uppercase font-bold text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-500/10 border border-rose-500/15 rounded-md transition"
+                >
+                  Clear Chat
+                </button>
+              )}
             </div>
 
-            {/* Response Area */}
-            <div className="flex-1 flex flex-col justify-center mb-6">
-              {queryResponse ? (
+            {/* Response Area / Message Thread */}
+            <div className="flex-1 flex flex-col justify-start max-h-[380px] overflow-y-auto pr-2 space-y-4 mb-4 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
+              {messages.length > 0 ? (
                 <div className="space-y-4">
-                  {/* Response card */}
-                  <div className="bg-gray-950/80 border border-gray-850 rounded-lg p-5 space-y-3">
-                    <div className="flex items-center justify-between border-b border-gray-900 pb-2">
-                      <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">
-                        Response Output
-                      </span>
-                      <div className="flex items-center gap-4 text-[10px] font-mono text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Latency: <strong className="text-gray-300">{queryResponse.latency_ms}ms</strong>
-                        </span>
-                        {queryResponse.token_count !== undefined && (
-                          <span className="flex items-center gap-1">
-                            <Zap className="h-3 w-3" />
-                            Tokens: <strong className="text-gray-300">{queryResponse.token_count}</strong>
-                          </span>
-                        )}
+                  {messages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex flex-col ${
+                        msg.role === "user" ? "items-end" : "items-start"
+                      } space-y-1`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                          msg.role === "user"
+                            ? "bg-indigo-600 text-white rounded-br-none"
+                            : "bg-gray-900 text-gray-200 border border-gray-800 rounded-bl-none"
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
                       </div>
+                      {msg.role === "agent" && (
+                        <div className="flex items-center gap-3 text-[10px] font-mono text-gray-500 px-2">
+                          <span className="flex items-center gap-0.5">
+                            <Clock className="h-3 w-3" />
+                            {msg.latency_ms}ms
+                          </span>
+                          {msg.token_count !== undefined && (
+                            <span className="flex items-center gap-0.5">
+                              <Zap className="h-3 w-3" />
+                              {msg.token_count} tokens
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-sm text-gray-300 font-medium whitespace-pre-wrap leading-relaxed">
-                      {queryResponse.answer || "No response content generated."}
-                    </div>
-                  </div>
+                  ))}
+                  <div ref={messagesEndRef} />
                 </div>
               ) : (
-                <div className="text-center py-10 text-gray-600 space-y-2">
+                <div className="flex-1 flex flex-col justify-center items-center text-center py-10 text-gray-600 space-y-2">
                   <div className="text-3xl">💬</div>
                   <p className="text-sm font-medium">No active conversation.</p>
-                  <p className="text-xs">Type your question below and click send to query the agent.</p>
+                  <p className="text-xs max-w-xs">
+                    Type your question below and click send to initiate a continuous chat session.
+                  </p>
                 </div>
               )}
             </div>
@@ -203,7 +294,7 @@ export default function PlaygroundPage() {
               <button
                 type="submit"
                 disabled={querying || !customQuestion.trim() || !selectedAgentId}
-                className="cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 disabled:bg-gray-850 px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:cursor-not-allowed"
+                className="cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 disabled:bg-gray-855 px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:cursor-not-allowed"
               >
                 {querying ? (
                   <div className="flex items-center gap-1.5">
@@ -222,5 +313,17 @@ export default function PlaygroundPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PlaygroundPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-96 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+      </div>
+    }>
+      <PlaygroundContent />
+    </Suspense>
   );
 }

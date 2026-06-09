@@ -22,6 +22,55 @@ app = FastAPI(title="Autonomous RAG Agent Server")
 class QuestionRequest(BaseModel):
     question: str
 
+
+class IngestRequest(BaseModel):
+    text: str
+    filename: str = "document.txt"
+
+
+@app.post("/ingest")
+async def ingest_agent_docs(body: IngestRequest):
+    import tempfile
+    import os
+    from sqlalchemy import text as sql_text
+
+    # 1. Reset PgVector table first to ensure a clean evaluation context
+    try:
+        with engine.connect() as conn:
+            conn.execute(sql_text("DELETE FROM auto_rag_docs"))
+            conn.commit()
+    except Exception as db_err:
+        print(f"Warning: Failed to clean PgVector table: {db_err}")
+
+    # 2. Write content to a temp file and ingest it
+    suffix = ".txt"
+    if body.filename.endswith(".pdf"):
+        suffix = ".pdf"
+    elif body.filename.endswith(".md"):
+        suffix = ".md"
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(body.text.encode("utf-8"))
+        tmp_path = tmp.name
+
+    try:
+        agent.knowledge.add_content(path=tmp_path)
+        return {
+            "agent_name": "Autonomous RAG",
+            "status": "success"
+        }
+    except Exception as e:
+        return {
+            "agent_name": "Autonomous RAG",
+            "status": "failed",
+            "error": str(e)
+        }
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
 # Resolve database URL and API Key
 supabase_db_url = os.getenv("SUPABASE_DB_URL")
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")

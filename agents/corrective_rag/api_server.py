@@ -17,6 +17,23 @@ class QuestionRequest(BaseModel):
     question: str
 
 
+class IngestRequest(BaseModel):
+    text: str
+    filename: str = "document.txt"
+
+
+@app.post("/ingest")
+async def ingest_agent_docs(body: IngestRequest):
+    from langchain.schema import Document
+    from corrective_rag_core import ingest_documents
+    doc = Document(page_content=body.text, metadata={"source": body.filename})
+    success = ingest_documents([doc])
+    return {
+        "agent_name": "Corrective RAG",
+        "status": "success" if success else "failed"
+    }
+
+
 @app.get("/health")
 def health():
     return {

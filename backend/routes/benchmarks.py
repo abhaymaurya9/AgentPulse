@@ -49,6 +49,33 @@ async def generate_benchmarks(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save benchmark tasks to database: {str(e)}")
 
+    # 4. Ingest Document into registered agents' vector databases
+    try:
+        import os
+        import httpx
+        # Fetch active agents from Supabase
+        agents = supabase.table("agents").select("*").execute().data or []
+        for agent in agents:
+            endpoint_url = agent.get("endpoint_url")
+            if endpoint_url:
+                target_url = endpoint_url.replace("/run", "/ingest").replace("/chat", "/ingest")
+                if os.getenv("RUNNING_IN_DOCKER") == "true":
+                    target_url = target_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+                
+                print(f"Propagating uploaded document to agent ingest endpoint: {agent['name']} ({target_url})")
+                try:
+                    async with httpx.AsyncClient() as client:
+                        ingest_res = await client.post(
+                            target_url,
+                            json={"text": text, "filename": filename},
+                            timeout=60.0
+                        )
+                        print(f"Ingest response from {agent['name']}: {ingest_res.status_code} - {ingest_res.text}")
+                except Exception as agent_err:
+                    print(f"Failed to ingest to agent {agent['name']} at {target_url}: {agent_err}")
+    except Exception as ingest_err:
+        print(f"Failed to trigger agent ingestion pipeline: {ingest_err}")
+
     return {
         "generated_count": inserted_count,
         "tasks": tasks,

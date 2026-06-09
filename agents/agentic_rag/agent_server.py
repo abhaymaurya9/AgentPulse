@@ -22,6 +22,62 @@ class QuestionRequest(BaseModel):
     question: str
 
 
+class IngestRequest(BaseModel):
+    text: str
+    filename: str = "document.txt"
+
+
+@app.post("/ingest")
+async def ingest_agent_docs(body: IngestRequest):
+    import tempfile
+    import os
+    import shutil
+
+    # 1. Reset LanceDB table/database to ensure clean evaluation context
+    try:
+        import lancedb
+        db = lancedb.connect("tmp/lancedb")
+        if "agno_docs" in db.table_names():
+            db.drop_table("agno_docs")
+    except Exception as db_err:
+        print(f"Warning: Failed to reset LanceDB table: {db_err}")
+        # Fallback: try removing the folder if lancedb connection is not active
+        try:
+            if os.path.exists("tmp/lancedb"):
+                shutil.rmtree("tmp/lancedb")
+        except Exception:
+            pass
+
+    # 2. Write content to a temp file and ingest it
+    suffix = ".txt"
+    if body.filename.endswith(".pdf"):
+        suffix = ".pdf"
+    elif body.filename.endswith(".md"):
+        suffix = ".md"
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(body.text.encode("utf-8"))
+        tmp_path = tmp.name
+
+    try:
+        agent.knowledge.add_content(path=tmp_path)
+        return {
+            "agent_name": "Agentic RAG",
+            "status": "success"
+        }
+    except Exception as e:
+        return {
+            "agent_name": "Agentic RAG",
+            "status": "failed",
+            "error": str(e)
+        }
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
 # ---------- Knowledge ----------
 
 knowledge = Knowledge(

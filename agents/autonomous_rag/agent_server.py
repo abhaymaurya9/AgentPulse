@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from typing import Optional
 
 from agno.agent import Agent
 from agno.models.openai.like import OpenAILike
@@ -21,7 +22,7 @@ app = FastAPI(title="Autonomous RAG Agent Server")
 
 class QuestionRequest(BaseModel):
     question: str
-    session_id: str = None
+    session_id: Optional[str] = None
 
 
 class IngestRequest(BaseModel):

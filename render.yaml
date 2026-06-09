@@ -1,3 +1,13 @@
+envVarGroups:
+  - name: agentpulse-env
+    envVars:
+      - key: SUPABASE_URL
+      - key: SUPABASE_KEY
+      - key: GROQ_API_KEY
+      - key: SUPABASE_DB_URL
+      - key: OPENROUTER_API_KEY
+      - key: TAVILY_API_KEY
+
 services:
   # 1. Backend Service
   - type: web
@@ -7,12 +17,7 @@ services:
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
     envVars:
-      - key: SUPABASE_URL
-        sync: true
-      - key: SUPABASE_KEY
-        sync: true
-      - key: GROQ_API_KEY
-        sync: true
+      - fromGroup: agentpulse-env
       - key: RUNNING_IN_DOCKER
         value: "false"
 
@@ -24,8 +29,7 @@ services:
     dockerContext: ./agents/agentic_rag
     dockerfilePath: ./agents/agentic_rag/Dockerfile
     envVars:
-      - key: GROQ_API_KEY
-        sync: true
+      - fromGroup: agentpulse-env
 
   # 3. Autonomous RAG Service
   - type: web
@@ -35,10 +39,7 @@ services:
     dockerContext: ./agents/autonomous_rag
     dockerfilePath: ./agents/autonomous_rag/Dockerfile
     envVars:
-      - key: GROQ_API_KEY
-        sync: true
-      - key: SUPABASE_DB_URL
-        sync: true
+      - fromGroup: agentpulse-env
 
   # 4. Corrective RAG Service
   - type: web
@@ -48,7 +49,4 @@ services:
     dockerContext: ./agents/corrective_rag
     dockerfilePath: ./agents/corrective_rag/Dockerfile
     envVars:
-      - key: OPENROUTER_API_KEY
-        sync: true
-      - key: TAVILY_API_KEY
-        sync: true
+      - fromGroup: agentpulse-env

@@ -7,13 +7,13 @@ def setup_agents():
         {
             "name": "Agentic RAG",
             "endpoint_url": "http://localhost:8001/run",
-            "model_name": "openai/gpt-oss-120b:free",
+            "model_name": "meta-llama/llama-4-scout-17b-16e-instruct",
             "description": "Best for: Complex reasoning, logical deduction, and step-by-step problem solving. Uses explicit step-by-step thinking paths (thought reasoning trace) before executing queries over LanceDB and DuckDuckGo."
         },
         {
             "name": "Autonomous RAG",
             "endpoint_url": "http://localhost:8002/run",
-            "model_name": "openai/gpt-oss-120b:free",
+            "model_name": "meta-llama/llama-4-scout-17b-16e-instruct",
             "description": "Best for: General conversational Q&A, Supabase database-backed search, and flexible queries. Autonomously routes questions between PgVector knowledge base and DuckDuckGo web search."
         },
         {

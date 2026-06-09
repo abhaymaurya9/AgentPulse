@@ -158,17 +158,25 @@ def query_agent(agent_id: str, body: dict):
     
     endpoint_url = agent[0]["endpoint_url"]
     if os.getenv("RUNNING_IN_DOCKER") == "true":
-        endpoint_url = endpoint_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+        if ":8001" in endpoint_url:
+            endpoint_url = endpoint_url.replace("localhost", "agentic_rag").replace("127.0.0.1", "agentic_rag")
+        elif ":8002" in endpoint_url:
+            endpoint_url = endpoint_url.replace("localhost", "autonomous_rag").replace("127.0.0.1", "autonomous_rag")
+        elif ":8003" in endpoint_url:
+            endpoint_url = endpoint_url.replace("localhost", "corrective_rag").replace("127.0.0.1", "corrective_rag")
+        else:
+            endpoint_url = endpoint_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
     question = body.get("question", "")
     session_id = body.get("session_id")
     
     try:
         try:
-            res = httpx.post(
-                endpoint_url,
-                json={"question": question, "session_id": session_id},
-                timeout=120.0
-            )
+            with httpx.Client(trust_env=False) as client:
+                res = client.post(
+                    endpoint_url,
+                    json={"question": question, "session_id": session_id},
+                    timeout=120.0
+                )
         except Exception as conn_err:
             raise HTTPException(
                 status_code=502,

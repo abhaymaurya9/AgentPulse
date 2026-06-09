@@ -44,6 +44,12 @@ services:
       context: ./agents/corrective_rag
     ports:
       - "8003:8003"
+    volumes:
+      - corrective_rag_data:/app/local_qdrant_db
     env_file:
       - ./agents/corrective_rag/.env
     restart: always
+
+volumes:
+  corrective_rag_data:
+

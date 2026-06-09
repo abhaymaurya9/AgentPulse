@@ -60,11 +60,18 @@ async def generate_benchmarks(file: UploadFile = File(...)):
             if endpoint_url:
                 target_url = endpoint_url.replace("/run", "/ingest").replace("/chat", "/ingest")
                 if os.getenv("RUNNING_IN_DOCKER") == "true":
-                    target_url = target_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+                    if ":8001" in target_url:
+                        target_url = target_url.replace("localhost", "agentic_rag").replace("127.0.0.1", "agentic_rag")
+                    elif ":8002" in target_url:
+                        target_url = target_url.replace("localhost", "autonomous_rag").replace("127.0.0.1", "autonomous_rag")
+                    elif ":8003" in target_url:
+                        target_url = target_url.replace("localhost", "corrective_rag").replace("127.0.0.1", "corrective_rag")
+                    else:
+                        target_url = target_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
                 
                 print(f"Propagating uploaded document to agent ingest endpoint: {agent['name']} ({target_url})")
                 try:
-                    async with httpx.AsyncClient() as client:
+                    async with httpx.AsyncClient(trust_env=False) as client:
                         ingest_res = await client.post(
                             target_url,
                             json={"text": text, "filename": filename},

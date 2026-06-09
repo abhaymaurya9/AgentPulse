@@ -45,7 +45,8 @@ def setup_assistant(provider: str, api_key: str, model_id: str) -> Agent:
     elif provider == "Groq":
         llm = Groq(
             id=model_id,
-            api_key=api_key
+            api_key=api_key,
+            temperature=0.0
         )
     else:
         # Configure base URL based on provider
@@ -82,7 +83,6 @@ def setup_assistant(provider: str, api_key: str, model_id: str) -> Agent:
             "Search your knowledge base first.",  
             "If not found, search the internet.",  
             "Provide clear and concise answers.",  
-            "CRITICAL: Always use native function calling parameters. Do NOT wrap tool calls in XML-like tags like '<function=...>' or '</function>'. Generate only the native tool call arguments.",
         ],
         search_knowledge=True,  
         markdown=True,  
@@ -145,14 +145,14 @@ def main():
     elif selected_provider == "Groq (Free)":
         provider_name = "Groq"
         api_key = groq_api_key
-        model_id = st.sidebar.selectbox("Select Model", ["llama-3.3-70b-versatile", "llama3-8b-8192"])
+        model_id = st.sidebar.selectbox("Select Model", ["meta-llama/llama-4-scout-17b-16e-instruct", "llama-3.1-8b-instant"])
     elif selected_provider == "OpenRouter (Free)":
         provider_name = "OpenRouter"
         api_key = openrouter_api_key
         model_id = st.sidebar.selectbox(
             "Select Model",
             [
-                "openai/gpt-oss-120b:free",
+                "meta-llama/llama-3.3-70b-instruct:free",
                 "openai/gpt-oss-20b:free",
                 "google/gemma-4-26b-a4b-it:free",
                 "qwen/qwen3-next-80b-a3b-instruct:free",

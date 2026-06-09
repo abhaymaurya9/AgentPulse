@@ -66,7 +66,7 @@ if openrouter_key:
     def load_agent(_kb: Knowledge) -> Agent:
         return Agent(
             model=OpenAILike(
-                id="openai/gpt-oss-120b:free",
+                id="meta-llama/llama-3.3-70b-instruct:free",
                 api_key=openrouter_key,
                 base_url="https://openrouter.ai/api/v1",
             ),

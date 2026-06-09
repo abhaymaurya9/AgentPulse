@@ -33,33 +33,24 @@ async def ingest_agent_docs(body: IngestRequest):
     import os
     import shutil
 
-    # 1. Reset LanceDB table/database to ensure clean evaluation context
+    # 1. Clean old chunks for the same filename from LanceDB table
     try:
         import lancedb
         db = lancedb.connect("tmp/lancedb")
         if "agno_docs" in db.table_names():
-            db.drop_table("agno_docs")
+            table = db.open_table("agno_docs")
+            table.delete(f"payload LIKE '%\"name\": \"{body.filename}\"%'")
+            print(f"Deleted existing chunks for filename '{body.filename}' from LanceDB.")
     except Exception as db_err:
-        print(f"Warning: Failed to reset LanceDB table: {db_err}")
-        # Fallback: try removing the folder if lancedb connection is not active
-        try:
-            if os.path.exists("tmp/lancedb"):
-                shutil.rmtree("tmp/lancedb")
-        except Exception:
-            pass
+        print(f"Warning: Failed to clean LanceDB table: {db_err}")
 
-    # 2. Write content to a temp file and ingest it
-    suffix = ".txt"
-    if body.filename.endswith(".pdf"):
-        suffix = ".pdf"
-    elif body.filename.endswith(".md"):
-        suffix = ".md"
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(body.text.encode("utf-8"))
-        tmp_path = tmp.name
-
+    # 2. Write content to a temp file with original name under a custom temp directory
+    temp_dir = tempfile.mkdtemp()
+    tmp_path = os.path.join(temp_dir, body.filename)
     try:
+        with open(tmp_path, "wb") as f:
+            f.write(body.text.encode("utf-8"))
+
         agent.knowledge.add_content(path=tmp_path)
         return {
             "agent_name": "Agentic RAG",
@@ -73,7 +64,10 @@ async def ingest_agent_docs(body: IngestRequest):
         }
     finally:
         try:
-            os.unlink(tmp_path)
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
         except Exception:
             pass
 
@@ -96,11 +90,13 @@ knowledge.add_content(
 
 # ---------- Agent ----------
 
+from agno.models.groq import Groq
+
 agent = Agent(
-    model=OpenAILike(
-        id="openai/gpt-oss-120b:free",
-        api_key=os.getenv("OPENROUTER_API_KEY"),
-        base_url="https://openrouter.ai/api/v1",
+    model=Groq(
+        id="meta-llama/llama-4-scout-17b-16e-instruct",
+        api_key=os.getenv("GROQ_API_KEY"),
+        temperature=0.0
     ),
     knowledge=knowledge,
     search_knowledge=True,
@@ -142,6 +138,20 @@ async def run_agent(body: QuestionRequest):
     if answer is None:
         answer = ""
 
+    # Check if the answer contains a raw error JSON from Groq tool_use_failed
+    if answer and '"tool_use_failed"' in answer:
+        try:
+            import json as _json
+            err_data = _json.loads(answer)
+            if isinstance(err_data, dict) and "error" in err_data:
+                failed_gen = err_data["error"].get("failed_generation", "")
+                if failed_gen:
+                    answer = failed_gen
+                else:
+                    answer = err_data["error"].get("message", answer)
+        except Exception:
+            pass
+
     # Fallback: if agent returned empty (free model tool-calling failure),
     # perform a direct DuckDuckGo web search
     if not answer.strip():
@@ -159,14 +169,8 @@ async def run_agent(body: QuestionRequest):
 
     latency = int((time.time() - start) * 1000)
 
-    try:
-        import tiktoken
-
-        enc = tiktoken.get_encoding("cl100k_base")
-        token_count = len(enc.encode(answer))
-
-    except Exception:
-        token_count = len(answer.split()) * 1.3 if answer else 0
+    # Fast estimation of token count to avoid downloading encoding files over proxy
+    token_count = len(answer.split()) * 1.3 if answer else 0
 
     return {
         "agent_name": "Agentic RAG",

@@ -5,14 +5,22 @@ from db.supabase_client import supabase
 def call_agent(endpoint_url, question):
     """Agent ko question bhejo, answer + latency lo"""
     if os.getenv("RUNNING_IN_DOCKER") == "true":
-        endpoint_url = endpoint_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+        if ":8001" in endpoint_url:
+            endpoint_url = endpoint_url.replace("localhost", "agentic_rag").replace("127.0.0.1", "agentic_rag")
+        elif ":8002" in endpoint_url:
+            endpoint_url = endpoint_url.replace("localhost", "autonomous_rag").replace("127.0.0.1", "autonomous_rag")
+        elif ":8003" in endpoint_url:
+            endpoint_url = endpoint_url.replace("localhost", "corrective_rag").replace("127.0.0.1", "corrective_rag")
+        else:
+            endpoint_url = endpoint_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
     start = time.time()
     try:
-        res = httpx.post(
-            endpoint_url,
-            json={"question": question},
-            timeout=90.0
-        )
+        with httpx.Client(trust_env=False) as client:
+            res = client.post(
+                endpoint_url,
+                json={"question": question},
+                timeout=90.0
+            )
         data = res.json()
         return {
             "answer":     data.get("answer", ""),
@@ -62,8 +70,14 @@ def task_success(agent_answer, ground_truth):
     if not agent_answer_str or not ground_truth_str:
         return 0.0
 
-    gt_words  = set(ground_truth_str.lower().split())
-    ans_words = set(agent_answer_str.lower().split())
+    import re
+    # Clean text from punctuation and split
+    clean_gt = re.sub(r'[^\w\s]', '', ground_truth_str.lower())
+    clean_ans = re.sub(r'[^\w\s]', '', agent_answer_str.lower())
+    
+    gt_words  = set(clean_gt.split())
+    ans_words = set(clean_ans.split())
+    
     overlap   = gt_words & ans_words
     return round(len(overlap) / len(gt_words), 3) if gt_words else 0.0
 
@@ -108,12 +122,43 @@ def run_evaluation(agent_id: str):
     agent = supabase.table("agents").select("*").eq("id", agent_id).execute().data[0]
 
     # 2. Benchmark tasks lo
-    tasks = supabase.table("benchmark_tasks").select("*").order("created_at", desc=True).limit(5).execute().data
+    tasks = supabase.table("benchmark_tasks").select("*").eq("task_type", "rag").order("created_at", desc=True).limit(5).execute().data
     if not tasks:
         return {"error": "No benchmark tasks found"}
 
+    # 2.1 Pre-ingest benchmark contexts into agent's database before running evaluation
+    endpoint_url = agent.get("endpoint_url")
+    if endpoint_url:
+        ingest_url = endpoint_url.replace("/run", "/ingest").replace("/chat", "/ingest")
+        if os.getenv("RUNNING_IN_DOCKER") == "true":
+            if ":8001" in ingest_url:
+                ingest_url = ingest_url.replace("localhost", "agentic_rag").replace("127.0.0.1", "agentic_rag")
+            elif ":8002" in ingest_url:
+                ingest_url = ingest_url.replace("localhost", "autonomous_rag").replace("127.0.0.1", "autonomous_rag")
+            elif ":8003" in ingest_url:
+                ingest_url = ingest_url.replace("localhost", "corrective_rag").replace("127.0.0.1", "corrective_rag")
+            else:
+                ingest_url = ingest_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
+        
+        # Collect unique contexts from tasks
+        unique_contexts = list(set(t["context"] for t in tasks if t.get("context")))
+        if unique_contexts:
+            combined_text = "\n\n".join(unique_contexts)
+            print(f"Pre-ingesting benchmark contexts into agent {agent['name']} at {ingest_url}...")
+            try:
+                with httpx.Client(trust_env=False) as client:
+                    ingest_res = client.post(
+                        ingest_url,
+                        json={"text": combined_text, "filename": "benchmark_eval_context.txt"},
+                        timeout=60.0
+                    )
+                    print(f"Pre-ingestion response: {ingest_res.status_code} - {ingest_res.text}")
+            except Exception as ingest_err:
+                print(f"Warning: Pre-ingestion failed: {ingest_err}")
+
     all_scores = []
     all_traces = []
+
 
     for i, task in enumerate(tasks):
         print(f"Task {i+1}/{len(tasks)}: {task['question']}")

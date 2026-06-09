@@ -74,13 +74,8 @@ async def run_agent(body: QuestionRequest):
 
     latency = int((time.time() - start) * 1000)
 
-    # Estimate token count
-    try:
-        import tiktoken
-        enc = tiktoken.get_encoding("cl100k_base")
-        token_count = len(enc.encode(generation))
-    except Exception:
-        token_count = int(len(generation.split()) * 1.3) if generation else 0
+    # Fast estimation of token count to avoid downloading encoding files over proxy
+    token_count = int(len(generation.split()) * 1.3) if generation else 0
 
     return {
         "agent_name": "Corrective RAG",

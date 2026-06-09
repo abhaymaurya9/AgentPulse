@@ -158,16 +158,38 @@ def ingest_documents(docs: list) -> bool:
         client = get_qdrant_client()
         collection_name = "rag-qdrant"
 
-        try:
-            # Try to delete the collection if it exists
-            client.delete_collection(collection_name)
-        except Exception:
-            pass  
-
-        client.create_collection(
-            collection_name=collection_name,
-            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
-        )
+        # Check if collection exists
+        collections = client.get_collections()
+        collection_names = [col.name for col in collections.collections]
+        if collection_name not in collection_names:
+            client.create_collection(
+                collection_name=collection_name,
+                vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+            )
+        else:
+            # Delete existing points with the same source metadata to prevent duplicates
+            sources = set()
+            for doc in docs:
+                source = doc.metadata.get("source")
+                if source:
+                    sources.add(source)
+            for source in sources:
+                from qdrant_client.models import Filter, FieldCondition, MatchValue
+                try:
+                    client.delete(
+                        collection_name=collection_name,
+                        points_selector=Filter(
+                            must=[
+                                FieldCondition(
+                                    key="metadata.source",
+                                    match=MatchValue(value=source)
+                                )
+                            ]
+                        )
+                    )
+                    print(f"Deleted existing chunks for source '{source}' from Qdrant.")
+                except Exception as del_err:
+                    print(f"Warning: Failed to delete chunks for source '{source}': {del_err}")
 
         # Create vectorstore
         vectorstore = Qdrant(
@@ -295,16 +317,16 @@ def grade_documents(state):
     )
 
     prompt = PromptTemplate(template="""You are grading the relevance of a retrieved document to a user question.
-        Return ONLY a JSON object with a "score" field that is either "yes" or "no".
-        Do not include any other text or explanation.
         
         Document: {context}
         Question: {question}
         
         Rules:
-        - Check for related keywords or semantic meaning
-        - Use lenient grading to only filter clear mismatches
-        - Return exactly like this example: {{"score": "yes"}} or {{"score": "no"}}""",
+        1. If the document contains any sentence, phrase, or fact that answers the question, you MUST grade it as relevant ("yes").
+        2. Use extremely lenient grading. Only filter out documents that are completely unrelated to the question.
+        3. Do not reject a document just because some sentences in it are irrelevant or noisy.
+        4. Explain your reasoning briefly.
+        5. At the end, output your final score in JSON format exactly like: {{"score": "yes"}} or {{"score": "no"}}""",
         input_variables=["context", "question"])
 
     chain = (
@@ -316,28 +338,35 @@ def grade_documents(state):
     filtered_docs = []
     search = "No"
     
-    for d in documents:
-        try:
-            response = chain.invoke({"question": question, "context": d.page_content})
-            import re
-            json_match = re.search(r'\{.*\}', response)
-            if json_match:
-                response = json_match.group()
-            
-            import json
-            score = json.loads(response)
-            
-            if score.get("score") == "yes":
-                print("~-grade: document relevant-~")
-                filtered_docs.append(d)
-            else:
-                print("~-grade: document not relevant-~")
-                search = "Yes"
+    if not documents:
+        search = "Yes"
+    else:
+        for d in documents:
+            try:
+                response = chain.invoke({"question": question, "context": d.page_content})
+                print(f"DEBUG - Question: {question}")
+                print(f"DEBUG - Doc: {d.page_content}")
+                print(f"DEBUG - Grader raw response: {response}")
+                import re
+                json_match = re.search(r'\{.*\}', response)
+                if json_match:
+                    response = json_match.group()
+                print(f"DEBUG - Grader parsed JSON: {response}")
                 
-        except Exception as e:
-            print(f"Error grading document: {str(e)}")
-            filtered_docs.append(d)
-            continue
+                import json
+                score = json.loads(response)
+                
+                if score.get("score") == "yes":
+                    print("~-grade: document relevant-~")
+                    filtered_docs.append(d)
+                else:
+                    print("~-grade: document not relevant-~")
+                    search = "Yes"
+                    
+            except Exception as e:
+                print(f"Error grading document: {str(e)}")
+                filtered_docs.append(d)
+                continue
 
     return {"keys": {"documents": filtered_docs, "question": question, "run_web_search": search}}
 

@@ -64,8 +64,8 @@ export function middleware(request: NextRequest) {
       }
     } else {
       // User is not approved
-      // If they try to access protected or admin routes, redirect to pending page
-      if (isProtectedRoute || isAdminRoute) {
+      // If they try to access protected, admin, or auth routes (login/signup), redirect to pending page
+      if (isProtectedRoute || isAdminRoute || isAuthRoute) {
         const pendingUrl = new URL("/auth/pending", request.url);
         return NextResponse.redirect(pendingUrl);
       }

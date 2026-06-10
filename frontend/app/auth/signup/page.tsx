@@ -49,7 +49,13 @@ export default function SignupPage() {
       // we can save cookies and redirect
       if (data.session) {
         document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${data.session.expires_in}; SameSite=Lax; Secure`;
-        router.push("/dashboard");
+        
+        const isApproved = data.session.user?.app_metadata?.approved === true;
+        if (isApproved) {
+          router.push("/dashboard");
+        } else {
+          router.push("/auth/pending");
+        }
         router.refresh();
       } else {
         // Fallback in case email confirmation is turned ON

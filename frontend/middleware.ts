@@ -35,6 +35,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/agents") ||
     pathname.startsWith("/benchmarks") ||
+    pathname.startsWith("/playground") ||
     pathname === "/"; // Redirect root path to dashboard
 
   // Admin paths (require admin privileges)
@@ -87,6 +88,7 @@ export const config = {
     "/dashboard/:path*",
     "/agents/:path*",
     "/benchmarks/:path*",
+    "/playground/:path*",
     "/admin/:path*",
     "/auth/login",
     "/auth/signup",

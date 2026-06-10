@@ -98,11 +98,15 @@ def composite_score(faithfulness: float, context_precision: float, context_recal
 
     return round((rag_score*0.50 + task_success*0.30 + efficiency*0.20) * 100, 2)
 
-def check_drift(agent_id: str, current_score: float) -> tuple[bool, float]:
+def check_drift(agent_id: str, current_score: float, user_id: str | None = None) -> tuple[bool, float]:
     """Check if composite score has dropped by >= 10% compared to the rolling average of up to the last 3 runs"""
-    prev = supabase.table("eval_runs").select("composite_score")\
-           .eq("agent_id", agent_id).order("run_date", desc=True)\
-           .limit(3).execute().data
+    query = supabase.table("eval_runs").select("composite_score").eq("agent_id", agent_id)
+    if user_id:
+        query = query.or_(f"user_id.eq.{user_id},user_id.is.null")
+    else:
+        query = query.is_("user_id", "null")
+        
+    prev = query.order("run_date", desc=True).limit(3).execute().data
     if not prev:
         return False, 0.0
     
@@ -113,9 +117,7 @@ def check_drift(agent_id: str, current_score: float) -> tuple[bool, float]:
         return False, 0.0
         
     drop = (avg_last_runs - current_score) / avg_last_runs * 100
-    return drop >= 10, round(drop, 2)
-
-def run_evaluation(agent_id: str):
+    return drop >= 10, round(drop, 2)def run_evaluation(agent_id: str, user_id: str | None = None):
     """Ek agent ka complete evaluation"""
 
     # 1. Agent info lo
@@ -158,7 +160,6 @@ def run_evaluation(agent_id: str):
 
     all_scores = []
     all_traces = []
-
 
     for i, task in enumerate(tasks):
         print(f"Task {i+1}/{len(tasks)}: {task['question']}")
@@ -217,14 +218,17 @@ def run_evaluation(agent_id: str):
     avg  = {k: round(sum(s[k] for s in all_scores) / len(all_scores), 3) for k in keys}
 
     # 9. Drift check
-    drift, drop_pct = check_drift(agent_id, avg["composite"])
+    drift, drop_pct = check_drift(agent_id, avg["composite"], user_id)
     
     # 9.2 Diagnose Drift Reason
     drift_reason = None
     if drift:
-        prev_runs = supabase.table("eval_runs").select("*")\
-                    .eq("agent_id", agent_id).order("run_date", desc=True)\
-                    .limit(3).execute().data
+        query = supabase.table("eval_runs").select("*").eq("agent_id", agent_id)
+        if user_id:
+            query = query.or_(f"user_id.eq.{user_id},user_id.is.null")
+        else:
+            query = query.is_("user_id", "null")
+        prev_runs = query.order("run_date", desc=True).limit(3).execute().data
         reasons = []
         if prev_runs:
             avg_faith = sum(r["faithfulness_score"] for r in prev_runs) / len(prev_runs)
@@ -261,7 +265,7 @@ def run_evaluation(agent_id: str):
             drift_reason = "Multiple metrics degraded"
 
     # 10. Supabase mein save karo
-    run = supabase.table("eval_runs").insert({
+    run_data = {
         "agent_id":           agent_id,
         "faithfulness_score": avg["faithfulness"],
         "context_precision":  avg["context_precision"],
@@ -273,7 +277,11 @@ def run_evaluation(agent_id: str):
         "composite_score":    avg["composite"],
         "drift_detected":     drift,
         "drift_reason":       drift_reason
-    }).execute().data[0]
+    }
+    if user_id:
+        run_data["user_id"] = user_id
+
+    run = supabase.table("eval_runs").insert(run_data).execute().data[0]
 
     # 11. Traces save karo
     for trace in all_traces:

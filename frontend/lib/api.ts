@@ -1,9 +1,22 @@
 import axios from "axios";
+import { supabase } from "./supabase";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 const api = axios.create({
   baseURL: BASE_URL,
+});
+
+api.interceptors.request.use(async (config) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
+    }
+  } catch (err) {
+    console.warn("Axios auth interceptor failed:", err);
+  }
+  return config;
 });
 
 export const getAgents = async () => {

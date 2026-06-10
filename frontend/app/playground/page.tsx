@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getAgents, queryAgent, getRun } from "@/lib/api";
 import { Send, Terminal, Clock, Zap, MessageSquare, AlertCircle, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 type Agent = {
   id: string;
@@ -33,8 +34,32 @@ function PlaygroundContent() {
   const [sessionId, setSessionId] = useState<string>("");
   const [querying, setQuerying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch logged in user on mount
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserId(user?.id || null);
+    });
+  }, []);
+
+  // Set persistent session ID for the user and agent
+  useEffect(() => {
+    if (loadingAgents || !selectedAgentId) return;
+    if (initialRunId) {
+      setSessionId(initialRunId);
+    } else {
+      const key = `playground_session_${userId || "anonymous"}_${selectedAgentId}`;
+      let sid = localStorage.getItem(key);
+      if (!sid) {
+        sid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem(key, sid);
+      }
+      setSessionId(sid);
+    }
+  }, [userId, selectedAgentId, loadingAgents, initialRunId]);
 
   useEffect(() => {
     async function loadAgents() {
@@ -51,7 +76,6 @@ function PlaygroundContent() {
 
         // If historical run is provided, seed initial chat with its traces
         if (initialRunId && selectedId) {
-          setSessionId(initialRunId);
           try {
             const runData = await getRun(initialRunId);
             if (runData && runData.traces) {
@@ -70,9 +94,6 @@ function PlaygroundContent() {
           } catch (runErr) {
             console.warn("Failed to load run traces for playground context:", runErr);
           }
-        } else {
-          // Generate a fresh session ID
-          setSessionId(Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
         }
       } catch (err) {
         const error = err as Error;
@@ -170,7 +191,6 @@ function PlaygroundContent() {
                   setSelectedAgentId(e.target.value);
                   setMessages([]);
                   setError(null);
-                  setSessionId(Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
                 }}
                 className="w-full bg-gray-950 border border-gray-850 focus:border-indigo-500/80 rounded-lg p-2.5 text-sm text-white outline-none transition cursor-pointer"
               >
@@ -223,7 +243,10 @@ function PlaygroundContent() {
                   type="button"
                   onClick={() => {
                     setMessages([]);
-                    setSessionId(Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
+                    const newSid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                    const key = `playground_session_${userId || "anonymous"}_${selectedAgentId}`;
+                    localStorage.setItem(key, newSid);
+                    setSessionId(newSid);
                   }}
                   className="cursor-pointer text-[10px] uppercase font-bold text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-500/10 border border-rose-500/15 rounded-md transition"
                 >

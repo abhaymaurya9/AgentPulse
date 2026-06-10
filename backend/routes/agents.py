@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from schemas.agent import AgentCreate
 from db.supabase_client import supabase
+from db.auth import get_user_id
 import httpx
 import os
 import json
@@ -151,7 +152,7 @@ Provide ONLY the direct answer, no preamble or explanation."""
 
 
 @router.post("/agents/{agent_id}/query")
-def query_agent(agent_id: str, body: dict):
+def query_agent(agent_id: str, body: dict, user_id: str | None = Depends(get_user_id)):
     agent = supabase.table("agents").select("endpoint_url").eq("id", agent_id).execute().data
     if not agent:
         raise HTTPException(404, "Agent not found")
@@ -234,10 +235,10 @@ def query_agent(agent_id: str, body: dict):
             )
             
             # Check for drift
-            drift, drop_pct = check_drift(agent_id, comp)
+            drift, drop_pct = check_drift(agent_id, comp, user_id)
             
             # Log as a standard evaluation run (version = None)
-            run = supabase.table("eval_runs").insert({
+            insert_data = {
                 "agent_id": agent_id,
                 "faithfulness_score": scores["faithfulness"],
                 "context_precision": scores["context_precision"],
@@ -249,7 +250,11 @@ def query_agent(agent_id: str, body: dict):
                 "composite_score": comp,
                 "drift_detected": drift,
                 "drift_reason": "Performance dropped" if drift else None
-            }).execute().data[0]
+            }
+            if user_id:
+                insert_data["user_id"] = user_id
+                
+            run = supabase.table("eval_runs").insert(insert_data).execute().data[0]
             
             # Insert trace
             supabase.table("run_traces").insert({

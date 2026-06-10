@@ -1,26 +1,37 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from evaluation.runner import run_evaluation
 from db.supabase_client import supabase
+from db.auth import get_user_id
 
 router = APIRouter()
 
 @router.post("/agents/{agent_id}/evaluate")
-async def trigger_eval(agent_id: str, background_tasks: BackgroundTasks):
+async def trigger_eval(agent_id: str, background_tasks: BackgroundTasks, user_id: str | None = Depends(get_user_id)):
     agent = supabase.table("agents").select("id").eq("id", agent_id).execute().data
     if not agent:
         raise HTTPException(404, "Agent not found")
 
-    background_tasks.add_task(run_evaluation, agent_id)
+    background_tasks.add_task(run_evaluation, agent_id, user_id)
     return {"message": "Evaluation started!", "agent_id": agent_id}
 
 @router.get("/agents/{agent_id}/runs")
-async def get_runs(agent_id: str):
-    return supabase.table("eval_runs").select("*")\
-           .eq("agent_id", agent_id).order("run_date", desc=True).execute().data
+async def get_runs(agent_id: str, user_id: str | None = Depends(get_user_id)):
+    query = supabase.table("eval_runs").select("*").eq("agent_id", agent_id)
+    if user_id:
+        query = query.or_(f"user_id.eq.{user_id},user_id.is.null")
+    else:
+        query = query.is_("user_id", "null")
+    return query.order("run_date", desc=True).execute().data
 
 @router.get("/runs/{run_id}")
-async def get_run(run_id: str):
-    run    = supabase.table("eval_runs").select("*").eq("id", run_id).execute().data
+async def get_run(run_id: str, user_id: str | None = Depends(get_user_id)):
+    query = supabase.table("eval_runs").select("*").eq("id", run_id)
+    if user_id:
+        query = query.or_(f"user_id.eq.{user_id},user_id.is.null")
+    else:
+        query = query.is_("user_id", "null")
+    run = query.execute().data
+    
     traces = supabase.table("run_traces").select("*")\
              .eq("eval_run_id", run_id).order("step_number").execute().data
     
@@ -34,10 +45,14 @@ async def get_run(run_id: str):
     return {"run": run[0] if run else None, "traces": traces}
 
 @router.get("/agents/{agent_id}/drift-history")
-async def get_drift_history(agent_id: str):
+async def get_drift_history(agent_id: str, user_id: str | None = Depends(get_user_id)):
     # Fetch ALL runs of the agent in desc order by date to compute historical rolling average drops
-    all_runs = supabase.table("eval_runs").select("*")\
-               .eq("agent_id", agent_id).order("run_date", desc=True).execute().data
+    query = supabase.table("eval_runs").select("*").eq("agent_id", agent_id)
+    if user_id:
+        query = query.or_(f"user_id.eq.{user_id},user_id.is.null")
+    else:
+        query = query.is_("user_id", "null")
+    all_runs = query.order("run_date", desc=True).execute().data
     if not all_runs:
         return []
         

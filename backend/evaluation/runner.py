@@ -116,8 +116,9 @@ def check_drift(agent_id: str, current_score: float, user_id: str | None = None)
     if avg_last_runs <= 0.0:
         return False, 0.0
         
-    drop = (avg_last_runs - current_score) / avg_last_runs * 100
-    return drop >= 10, round(drop, 2)def run_evaluation(agent_id: str, user_id: str | None = None):
+    return drop >= 10, round(drop, 2)
+
+def run_evaluation(agent_id: str, user_id: str | None = None):
     """Ek agent ka complete evaluation"""
 
     # 1. Agent info lo

@@ -11,9 +11,9 @@ def generate_qa_pairs(text: str, num_questions: int = 10) -> list[dict]:
     client = Groq(api_key=api_key)
     
     # Limit source text length to prevent exceeding Groq free tier Tokens Per Minute (TPM) rate limits.
-    # 12,000 characters is roughly 3,000 tokens, which fits comfortably under the 6,000 TPM limit.
-    if len(text) > 12000:
-        text = text[:12000] + "\n\n[Text truncated to stay within model token constraints]"
+    # 8,000 characters is roughly 2,000 tokens, which fits comfortably under the 6,000 TPM limit.
+    if len(text) > 8000:
+        text = text[:8000] + "\n\n[Text truncated to stay within model token constraints]"
     
     prompt = f"""You are an expert AI evaluator.
 Given the text below, generate exactly {num_questions} question-answer pairs that will be used to evaluate a RAG (Retrieval-Augmented Generation) agent.

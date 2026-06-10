@@ -83,10 +83,16 @@ knowledge = Knowledge(
     ),
 )
 
-# Add working source
-knowledge.add_content(
-    url="https://modelcontextprotocol.io/introduction"
-)
+@app.on_event("startup")
+def seed_knowledge():
+    try:
+        print("Seeding agentic RAG knowledge base...")
+        knowledge.add_content(
+            url="https://modelcontextprotocol.io/introduction"
+        )
+        print("Seeding completed successfully.")
+    except Exception as e:
+        print(f"Warning: Seeding knowledge base failed: {e}")
 
 # ---------- Agent ----------
 

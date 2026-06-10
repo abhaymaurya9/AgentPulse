@@ -126,11 +126,14 @@ def get_agent(session_id: Optional[str] = None, use_tools: bool = True) -> Agent
 
 agent = get_agent()
 
-# Pre-create all database tables once at startup to optimize latency
-try:
-    agent.db._create_all_tables()
-except Exception as db_init_err:
-    print(f"Warning: Failed to create database tables at startup: {db_init_err}")
+@app.on_event("startup")
+def pre_create_tables():
+    # Pre-create all database tables once at startup to optimize latency
+    try:
+        agent.db._create_all_tables()
+        print("Pre-created database tables successfully.")
+    except Exception as db_init_err:
+        print(f"Warning: Failed to create database tables at startup: {db_init_err}")
 
 @app.get("/health")
 def health():

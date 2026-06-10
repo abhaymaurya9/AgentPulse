@@ -11,6 +11,7 @@ export default function Navbar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Helper to determine if a link is active
   const isActive = (path: string) => {
@@ -20,22 +21,28 @@ export default function Navbar() {
     return pathname.startsWith(path);
   };
 
-  const navLinks = [
+  const baseLinks = [
     { name: "Dashboard", href: "/dashboard" },
     { name: "Agents List", href: "/agents" },
     { name: "Playground", href: "/playground" },
     { name: "Benchmarks", href: "/benchmarks" },
   ];
+  
+  const navLinks = isAdmin
+    ? [...baseLinks, { name: "Admin Panel", href: "/admin/users" }]
+    : baseLinks;
 
   useEffect(() => {
     // Check initial session
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUserEmail(user?.email || null);
+      setIsAdmin(user?.app_metadata?.is_admin === true);
     });
 
     // Listen for auth state changes to synchronize cookies and state
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUserEmail(session?.user?.email || null);
+      setIsAdmin(session?.user?.app_metadata?.is_admin === true);
       if (session) {
         document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${session.expires_in}; SameSite=Lax; Secure`;
       } else {
@@ -53,6 +60,7 @@ export default function Navbar() {
       await supabase.auth.signOut();
       document.cookie = "sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       setUserEmail(null);
+      setIsAdmin(false);
       setIsOpen(false);
       router.push("/auth/login");
       router.refresh();
